@@ -1,0 +1,22 @@
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.local
+
+# Private gallery data must stay outside Git.
+private/
+uploads/
+batch-*.sql
+private-*.sql
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.txt
+
+!README.md
+!NAI画廊项目方案.md

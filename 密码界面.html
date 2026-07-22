@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>森系密码界面</title>
+    <!-- 引入优雅的衬线字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;500;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        /* =========================================
+           基础重置与变量 (您可以保留或整合到您的全局CSS中)
+           ========================================= */
+        :root {
+            --forest-green: #2F4F4F;
+            --sage-light: #E0ECE4;
+            --sage-main: #8FBC8F;
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --shadow-soft: 0 10px 30px rgba(47, 79, 79, 0.1);
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            /* 仅为了演示效果设置的背景，移植时可移除 */
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            overflow: hidden;
+            position: relative;
+        }
+        /* 背景装饰图 (模拟网页背景，用于展示毛玻璃效果) */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('https://picsum.photos/seed/forest/1920/1080'); /* 随机森林图片 */
+            background-size: cover;
+            background-position: center;
+            opacity: 0.8;
+            z-index: -1;
+        }
+        /* =========================================
+           核心样式：杂志风卡片
+           ========================================= */
+        .password-wrapper {
+            position: relative;
+            z-index: 10;
+        }
+        .password-card {
+            /* 核心布局 */
+            width: 360px;
+            padding: 40px 30px;
+            position: relative;
+            text-align: center;
+            /* 杂志排版字体 */
+            font-family: 'Playfair Display', 'Noto Serif SC', serif;
+            color: var(--forest-green);
+            /* 纯白质感卡片 */
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(20px); /* 关键：毛玻璃模糊 */
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 2px; /* 轻微圆角，更像卡片 */
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: var(--shadow-soft);
+            /* 装饰性边框，增加杂志感 */
+            border-top: 4px solid var(--sage-main);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .password-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(47, 79, 79, 0.15);
+        }
+        /* 装饰元素：左上角编号 */
+        .mag-issue {
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--forest-green);
+            opacity: 0.5;
+            text-transform: uppercase;
+        }
+        /* 标题区域 */
+        .card-header {
+            margin-bottom: 30px;
+        }
+        .card-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+            font-style: italic;
+        }
+        .card-subtitle {
+            font-size: 12px;
+            font-weight: 300;
+            color: var(--forest-green);
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        /* =========================================
+           输入区域设计
+           ========================================= */
+        .input-group {
+            position: relative;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        /* 隐藏真实的输入框，用自定义UI覆盖 */
+        #password-input {
+            position: absolute;
+            opacity: 0;
+            z-index: -1;
+        }
+        /* 模拟输入框显示的圆点容器 */
+        .dots-container {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            cursor: pointer;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border: 1px solid var(--sage-main);
+            border-radius: 50%;
+            background-color: transparent;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        /* 激活状态（输入后） */
+        .dot.filled {
+            background-color: var(--forest-green);
+            border-color: var(--forest-green);
+            transform: scale(1.1);
+        }
+        /* 聚焦时的提示动画 */
+        .dots-container:focus-within .dot {
+            border-color: var(--forest-green);
+        }
+        /* 模拟光标闪烁 */
+        .dot.current {
+            animation: blink 1.5s infinite;
+            background-color: rgba(47, 79, 79, 0.3);
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+        /* =========================================
+           按钮设计 (杂志极简风)
+           ========================================= */
+        .enter-btn {
+            background: transparent;
+            border: 1px solid var(--forest-green);
+            color: var(--forest-green);
+            padding: 10px 30px;
+            font-family: 'Noto Serif SC', serif;
+            font-size: 12px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+        }
+        .enter-btn:hover {
+            background: var(--forest-green);
+            color: #fff;
+        }
+        .enter-btn::after {
+            content: '';
+            position: absolute;
+            width: 0%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background-color: var(--forest-green);
+            z-index: -1;
+            transition: width 0.3s ease;
+        }
+        .enter-btn:hover::after {
+            width: 100%;
+        }
+        /* =========================================
+           提示信息
+           ========================================= */
+        .message-box {
+            margin-top: 15px;
+            height: 20px;
+            font-size: 11px;
+            color: #d35400; /* 错误色：暖棕红 */
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            letter-spacing: 0.5px;
+        }
+        .message-box.visible {
+            opacity: 1;
+        }
+        /* =========================================
+           键盘触发区域 (移动端适配)
+           ========================================= */
+        .keyboard-trigger {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 5;
+            cursor: text;
+        }
+    </style>
+</head>
+<body>
+    <main class="password-wrapper">
+        <article class="password-card">
+            <!-- 装饰文字 -->
+            <span class="mag-issue">Vol. 24</span>
+            <header class="card-header">
+                <h2 class="card-title">Secret Garden</h2>
+                <p class="card-subtitle">Please enter your passcode</p>
+            </header>
+            <!-- 输入交互区 -->
+            <div class="input-group" id="inputArea" tabindex="0">
+                <input type="password" id="password-input" maxlength="6" autocomplete="off">
+                <div class="dots-container" id="dotsContainer">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+                <!-- 透明遮罩，用于点击唤起键盘 -->
+                <div class="keyboard-trigger" onclick="document.getElementById('password-input').focus()"></div>
+            </div>
+            <!-- 错误提示 -->
+            <div id="messageBox" class="message-box">密码错误，请重试</div>
+            <footer>
+                <button class="enter-btn" id="submitBtn">Unlock</button>
+            </footer>
+        </article>
+    </main>
+    <script>
+        /**
+         * 森系密码交互逻辑
+         * - 监听输入框变化
+         * - 动态更新圆点样式
+         * - 简单的模拟验证反馈
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            const passwordInput = document.getElementById('password-input');
+            const dots = document.querySelectorAll('.dot');
+            const submitBtn = document.getElementById('submitBtn');
+            const messageBox = document.getElementById('messageBox');
+            const inputArea = document.getElementById('inputArea');
+            // 更新圆点状态的函数
+            const updateDots = () => {
+                const value = passwordInput.value;
+                const length = value.length;
+                dots.forEach((dot, index) => {
+                    // 重置状态
+                    dot.classList.remove('filled', 'current');
+                    if (index < length) {
+                        // 已输入
+                        dot.classList.add('filled');
+                    } else if (index === length) {
+                        // 当前光标位置（闪烁效果）
+                        dot.classList.add('current');
+                    }
+                });
+            };
+            // 监听输入事件
+            passwordInput.addEventListener('input', updateDots);
+            // 监听聚焦事件，处理光标显示
+            passwordInput.addEventListener('focus', () => {
+                updateDots();
+            });
+            passwordInput.addEventListener('blur', () => {
+                // 失去焦点时移除光标闪烁效果
+                dots.forEach(dot => dot.classList.remove('current'));
+            });
+            // 模拟提交逻辑
+            submitBtn.addEventListener('click', () => {
+                const value = passwordInput.value;
+                // 这里只是模拟验证，实际使用请修改此处逻辑
+                if (value.length > 0 && value !== "123456") {
+                    // 模拟错误
+                    messageBox.textContent = "密码无效，请重新输入";
+                    messageBox.classList.add('visible');
+                    passwordInput.value = '';
+                    updateDots();
+                    // 简单的错误抖动动画
+                    document.querySelector('.password-card').animate([
+                        { transform: 'translateX(0)' },
+                        { transform: 'translateX(-5px)' },
+                        { transform: 'translateX(5px)' },
+                        { transform: 'translateX(0)' }
+                    ], { duration: 300 });
+                    // 重新聚焦
+                    setTimeout(() => passwordInput.focus(), 100);
+                } else {
+                    // 成功状态
+                    messageBox.textContent = "欢迎回来";
+                    messageBox.style.color = "var(--forest-green)";
+                    messageBox.classList.add('visible');
+                    // 模拟解锁后的操作，例如跳转
+                    // window.location.href = "/home";
+                    console.log("密码正确，执行解锁操作");
+                }
+            });
+            // 监听回车键
+            passwordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    submitBtn.click();
+                }
+            });
+            // 点击容器也可以聚焦
+            inputArea.addEventListener('click', () => {
+                passwordInput.focus();
+            });
+        });
+    </script>
+</body>
+</html>

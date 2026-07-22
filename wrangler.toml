@@ -1,0 +1,12 @@
+name = "nai-private-gallery"
+compatibility_date = "2026-07-22"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nai-gallery"
+database_id = "replace-with-your-d1-database-id"
+
+[[r2_buckets]]
+binding = "GALLERY_BUCKET"
+bucket_name = "nai-gallery-bucket"

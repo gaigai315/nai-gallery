@@ -1,0 +1,45 @@
+import { json, requireSession } from "../_lib/session.js";
+
+export async function onRequestGet({ request, env }) {
+  const auth = await requireSession(request, env);
+  if (auth.response) return auth.response;
+  const rows = await env.DB.prepare(
+    `SELECT b.batch_id, b.batch_name, b.created_at, b.expire_at, u.unlocked_at, u.last_seen_at
+     FROM batches b
+     LEFT JOIN user_batch_unlocks u ON u.batch_id = b.batch_id AND u.discord_id = ?
+     WHERE b.is_active = 1
+     ORDER BY b.created_at DESC`,
+  )
+    .bind(auth.session.discord_id)
+    .all();
+
+  const batches = rows.results || [];
+
+  // Attach cover_url for each batch using the first image
+  const coverMap = new Map();
+  if (batches.length > 0) {
+    const placeholders = batches.map(() => "?").join(", ");
+    const coverRows = await env.DB.prepare(
+      `SELECT batch_id, image_id
+       FROM images
+       WHERE batch_id IN (${placeholders}) AND is_active = 1
+       GROUP BY batch_id
+       HAVING image_id = MIN(image_id)`
+    )
+      .bind(...batches.map((b) => b.batch_id))
+      .all();
+    for (const row of coverRows.results || []) {
+      coverMap.set(
+        row.batch_id,
+        `/api/preview/${encodeURIComponent(row.image_id)}?batch_id=${encodeURIComponent(row.batch_id)}`
+      );
+    }
+  }
+
+  return json({
+    batches: batches.map((b) => ({
+      ...b,
+      cover_url: coverMap.get(b.batch_id) || "",
+    })),
+  });
+}
