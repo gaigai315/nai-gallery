@@ -6,27 +6,50 @@ export async function onRequestGet({ request, env, params }) {
   if (auth.response) return auth.response;
   if (!(await hasUnlock(env, auth.session.discord_id, params.batch_id))) return json({ error: "not_unlocked" }, 403);
 
+  const url = new URL(request.url);
+  const limit = Math.min(Number(url.searchParams.get("limit") || 50), 200);
+  const offset = Number(url.searchParams.get("offset") || 0);
+
   const batch = await env.DB.prepare(
-    "SELECT batch_id, batch_name, created_at FROM batches WHERE batch_id = ? AND is_active = 1",
+    "SELECT batch_id, batch_name, created_at, notes FROM batches WHERE batch_id = ? AND is_active = 1",
   )
     .bind(params.batch_id)
     .first();
   if (!batch) return json({ error: "not_found" }, 404);
 
+  const totalRow = await env.DB.prepare(
+    `SELECT COUNT(*) AS count FROM images WHERE batch_id = ? AND is_active = 1`
+  ).bind(params.batch_id).first();
+
+  const groups = await env.DB.prepare(
+    "SELECT group_id, title, notes, positive_prompt, negative_prompt, params_json FROM prompt_groups WHERE batch_id = ?",
+  )
+    .bind(params.batch_id)
+    .all();
+
   const rows = await env.DB.prepare(
     `SELECT i.image_id, i.batch_id, i.prompt_preview, i.width, i.height, i.created_at,
+            i.group_id,
             CASE WHEN f.image_id IS NULL THEN 0 ELSE 1 END AS is_favorite
      FROM images i
      LEFT JOIN favorites f ON f.discord_id = ? AND f.batch_id = i.batch_id AND f.image_id = i.image_id
      WHERE i.batch_id = ? AND i.is_active = 1
-     ORDER BY i.created_at ASC, i.image_id ASC`,
+     ORDER BY i.created_at ASC, i.image_id ASC
+     LIMIT ? OFFSET ?`,
   )
-    .bind(auth.session.discord_id, params.batch_id)
+    .bind(auth.session.discord_id, params.batch_id, limit, offset)
     .all();
 
   const images = (rows.results || []).map((image) => ({
     ...image,
     preview_url: `/api/preview/${encodeURIComponent(image.image_id)}?batch_id=${encodeURIComponent(params.batch_id)}`,
   }));
-  return json({ batch, images });
+  return json({
+    batch,
+    images,
+    groups: groups.results || [],
+    total: totalRow?.count || 0,
+    offset,
+    limit,
+  });
 }

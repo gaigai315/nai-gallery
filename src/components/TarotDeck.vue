@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="tarot-container" ref="trackRef"
     @mousedown.prevent="dragStart"
     @touchstart.passive="dragStart"
@@ -15,19 +15,28 @@
       @click="selectCard(i)"
     >
       <img :src="card.cover" :alt="card.batch_name" loading="lazy" />
+      <button
+        v-if="isAdmin"
+        class="card-delete-btn"
+        title="删除此批次"
+        @click.stop="emit('delete', card)"
+      >
+        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 
 const props = defineProps({
   cards: { type: Array, default: () => [] },
   selected: { type: Number, default: 0 },
+  isAdmin: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["select", "unlock"]);
+const emit = defineEmits(["select", "unlock", "delete"]);
 
 const trackRef = ref(null);
 const currentIndex = ref(props.selected);
@@ -45,7 +54,7 @@ function cardStyle(i) {
   const zIndex = 10 - Math.abs(diff);
 
   return {
-    transform: `translateX(${translateX}px) translateY(${translateY}px) rotateZ(${rotateZ}deg) scale(${scale})`,
+    transform: "translateX(" + translateX + "px) translateY(" + translateY + "px) rotateZ(" + rotateZ + "deg) scale(" + scale + ")",
     zIndex,
     filter: diff === 0 ? "none" : "blur(4px) brightness(0.7)",
     cursor: diff === 0 ? "pointer" : "pointer",
@@ -80,9 +89,7 @@ function dragEnd(e) {
   else if (diffX < -50 && currentIndex.value < max) currentIndex.value++;
 }
 
-function onResize() {
-  // force reactivity re-evaluation
-}
+function onResize() {}
 
 onMounted(() => {
   window.addEventListener("resize", onResize);
@@ -127,6 +134,28 @@ onUnmounted(() => {
   height: 100%;
   object-fit: cover;
   pointer-events: none;
+}
+
+.card-delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(192,57,43,0.4);
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e74c3c;
+  transition: background 0.2s;
+  z-index: 20;
+}
+.card-delete-btn:hover {
+  background: rgba(192,57,43,0.4);
 }
 
 @media (max-width: 768px) {

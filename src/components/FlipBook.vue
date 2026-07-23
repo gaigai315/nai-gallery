@@ -16,6 +16,7 @@
         </div>
       </div>
     </div>
+    <div class="book-page-indicator">{{ currentLeaf + 1 }} / {{ totalLeaves }}</div>
   </div>
 </template>
 
@@ -105,6 +106,8 @@ onUnmounted(() => {
 <style scoped>
 .book-container {
   display: flex;
+  flex-direction: column;
+  gap: 24px;
   position: relative;
   width: 100%;
   height: 60vh;
@@ -112,6 +115,12 @@ onUnmounted(() => {
   perspective: 2000px;
   justify-content: center;
   align-items: center;
+}
+
+.book-page-indicator {
+  font-size: 12px;
+  letter-spacing: 2px;
+  opacity: 0.4;
 }
 
 .book {

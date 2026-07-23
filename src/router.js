@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from "vue-router";
+﻿import { createRouter, createWebHistory } from "vue-router";
 
 const routes = [
   {
@@ -17,6 +17,12 @@ const routes = [
     path: "/gallery/:batchId",
     name: "InnerGallery",
     component: () => import("./views/InnerGalleryView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/favorites",
+    name: "Favorites",
+    component: () => import("./views/FavoritesView.vue"),
     meta: { requiresAuth: true },
   },
   {

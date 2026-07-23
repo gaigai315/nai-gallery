@@ -1,22 +1,38 @@
 <template>
   <div class="inner-grid">
     <div
-      v-for="image in images"
-      :key="image.image_id"
+      v-for="group in groups"
+      :key="group.key"
       class="inner-item"
-      @click="$emit('open', image)"
+      :class="{ 'has-multiple': group.images.length > 1 }"
+      @click="$emit('open', group.images[0], group)"
     >
-      <img :src="image.preview_url" :alt="image.image_id" loading="lazy" />
+      <img :src="group.images[0].preview_url" :alt="group.key" loading="lazy" />
     </div>
   </div>
 </template>
 
 <script setup>
-defineProps({
+import { computed } from "vue";
+
+const props = defineProps({
   images: { type: Array, default: () => [] },
 });
 
 defineEmits(["open"]);
+
+// Group images by positive_prompt, fallback to prompt_preview
+const groups = computed(() => {
+  const map = new Map();
+  for (const img of props.images) {
+    const key = img.positive_prompt || img.prompt_preview || img.image_id;
+    if (!map.has(key)) {
+      map.set(key, { key, images: [] });
+    }
+    map.get(key).images.push(img);
+  }
+  return [...map.values()];
+});
 </script>
 
 <style scoped>
@@ -60,6 +76,17 @@ defineEmits(["open"]);
 
 .inner-item:hover::after {
   opacity: 1;
+}
+
+.has-multiple::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 18px;
+  border: 2px solid var(--secondary);
+  opacity: 0.4;
+  z-index: 1;
+  pointer-events: none;
 }
 
 @media (max-width: 768px) {

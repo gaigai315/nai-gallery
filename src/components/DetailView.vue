@@ -5,7 +5,14 @@
     </button>
     <div class="ambient-bg"></div>
     <div class="detail-left" @click.self="close">
+      <button v-if="groupIndex > 0" class="detail-nav detail-prev" @click.stop="$emit('navigate', -1)">
+        <svg viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
+      </button>
       <img :src="image?.preview_url" :alt="image?.image_id" />
+      <button v-if="groupIndex < groupSize - 1" class="detail-nav detail-next" @click.stop="$emit('navigate', 1)">
+        <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+      </button>
+      <span v-if="groupSize > 1" class="detail-pos">{{ groupIndex + 1 }} / {{ groupSize }}</span>
     </div>
     <div class="detail-right">
       <div class="right-scroll">
@@ -54,9 +61,17 @@ import { ref, computed } from "vue";
 const props = defineProps({
   visible: Boolean,
   image: { type: Object, default: null },
+  group: { type: Object, default: null },
 });
 
-const emit = defineEmits(["close", "download", "favorite"]);
+const emit = defineEmits(["close", "download", "favorite", "navigate"]);
+
+const groupImages = computed(() => props.group?.images || []);
+const groupIndex = computed(() => {
+  if (!props.image || !groupImages.value.length) return -1;
+  return groupImages.value.findIndex(i => i.image_id === props.image.image_id);
+});
+const groupSize = computed(() => groupImages.value.length);
 
 const posShimmer = ref(false);
 const negShimmer = ref(false);
@@ -131,6 +146,50 @@ function copyPrompt(side) {
   max-width: 100%; max-height: 90vh;
   border-radius: 16px; box-shadow: 0 24px 48px var(--shadow);
   cursor: default;
+}
+
+.detail-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: background 0.3s, opacity 0.3s;
+}
+
+.detail-nav:hover { background: var(--glass-border); }
+.detail-nav svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.detail-prev { left: 12px; }
+.detail-next { right: 12px; }
+
+.detail-pos {
+  position: absolute;
+  bottom: 20px;
+  padding: 4px 14px;
+  border-radius: 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  font-size: 12px;
+  letter-spacing: 1px;
+  z-index: 5;
 }
 
 .detail-right {

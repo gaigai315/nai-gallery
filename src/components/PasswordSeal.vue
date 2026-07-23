@@ -10,6 +10,7 @@
       </div>
       <h2 class="seal-title">{{ batchName || "Locked Batch" }}</h2>
       <p class="seal-hint">Enter the batch password to unlock</p>
+      <p v-if="notes" class="seal-notes">{{ notes }}</p>
       <form class="seal-form" @submit.prevent="submitPassword">
         <input
           ref="inputRef"
@@ -36,6 +37,7 @@ const props = defineProps({
   visible: Boolean,
   batchName: { type: String, default: "" },
   batchId: { type: String, default: "" },
+  notes: { type: String, default: "" },
 });
 
 const emit = defineEmits(["close", "unlocked"]);
@@ -69,9 +71,9 @@ async function submitPassword() {
 
     const res = await fetch("/api/verify", {
       method: "POST",
- credentials: "include",
+credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: password.value }),
+      body: JSON.stringify({ password: password.value, batch_id: props.batchId }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -152,8 +154,18 @@ async function submitPassword() {
 .seal-hint {
   font-size: 13px;
   opacity: 0.6;
-  margin-bottom: 28px;
+  margin-bottom: 12px;
   letter-spacing: 1px;
+}
+
+.seal-notes {
+  font-size: 13px;
+  opacity: 0.5;
+  margin-bottom: 20px;
+  line-height: 1.5;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .seal-form {

@@ -2,6 +2,7 @@
   <div class="app-shell">
     <GlassNav v-if="isLoggedIn" />
     <router-view />
+    <Toast />
   </div>
 </template>
 
@@ -9,6 +10,7 @@
 import { onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import GlassNav from "./components/GlassNav.vue";
+import Toast from "./components/Toast.vue";
 import { useUser } from "./stores/user.js";
 import { useTheme } from "./stores/theme.js";
 
@@ -16,8 +18,10 @@ const router = useRouter();
 const { user, isLoggedIn, isAdmin, fetchMe } = useUser();
 const { theme } = useTheme();
 
-// Auth guard: redirect to landing if not logged in
+// Auth guard: only fire after initial fetchMe completes
+let ready = false
 watch([isLoggedIn, isAdmin], ([loggedIn, admin]) => {
+  if (!ready) return;
   const route = router.currentRoute.value;
   if (route.meta.requiresAuth && !loggedIn) {
     router.push("/");
@@ -30,6 +34,7 @@ watch([isLoggedIn, isAdmin], ([loggedIn, admin]) => {
 onMounted(async () => {
   document.documentElement.setAttribute("data-theme", theme.value);
   await fetchMe();
+  ready = true;
 
   // After loading user, check auth
   const route = router.currentRoute.value;

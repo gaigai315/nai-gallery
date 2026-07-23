@@ -2,11 +2,24 @@ name = "nai-private-gallery"
 compatibility_date = "2026-07-22"
 pages_build_output_dir = "dist"
 
+## Secrets & R2 credentials are injected via:
+##   npx wrangler pages secret put <NAME> --project-name nai-private-gallery
+## (live) or a local `.dev.vars` file for `wrangler pages dev`. Do NOT commit
+## real secrets to this file. Required secrets:
+##   DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI,
+##   SESSION_SECRET, COOKIE_NAME, PUBLIC_BASE_URL,
+##   R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
+##   DOWNLOAD_URL_TTL_SECONDS, DOWNLOAD_LIMIT_PER_HOUR, IP_HASH_SECRET
+
 [[d1_databases]]
 binding = "DB"
 database_name = "nai-gallery"
+## Run `npx wrangler d1 create nai-gallery` and paste the returned id below,
+## then `npx wrangler d1 execute nai-gallery --remote --file=migrations/0001_initial.sql`:
 database_id = "replace-with-your-d1-database-id"
 
 [[r2_buckets]]
 binding = "GALLERY_BUCKET"
 bucket_name = "nai-gallery-bucket"
+## Browser PUT direct-upload needs CORS on this bucket — apply with
+## `npx wrangler r2 bucket cors put nai-gallery-bucket --file r2-cors.json` (see 部署手册.md).

@@ -4,7 +4,10 @@ export async function onRequestGet({ request, env }) {
   const auth = await requireSession(request, env);
   if (auth.response) return auth.response;
   const rows = await env.DB.prepare(
-    `SELECT b.batch_id, b.batch_name, b.created_at, b.expire_at, u.unlocked_at, u.last_seen_at
+`SELECT b.batch_id, b.batch_name, b.created_at, b.expire_at, u.unlocked_at, u.last_seen_at,
+         b.notes, b.cover_image_id,
+         (SELECT COUNT(*) FROM images WHERE batch_id = b.batch_id AND is_active = 1) AS image_count,
+         (SELECT COUNT(*) FROM prompt_groups WHERE batch_id = b.batch_id) AS group_count
      FROM batches b
      LEFT JOIN user_batch_unlocks u ON u.batch_id = b.batch_id AND u.discord_id = ?
      WHERE b.is_active = 1
@@ -16,30 +19,36 @@ export async function onRequestGet({ request, env }) {
   const batches = rows.results || [];
 
   // Attach cover_url for each batch using the first image
-  const coverMap = new Map();
+  const coverMap = new Map(); // fallback for batches without explicit cover_image_id
   if (batches.length > 0) {
-    const placeholders = batches.map(() => "?").join(", ");
-    const coverRows = await env.DB.prepare(
-      `SELECT batch_id, image_id
-       FROM images
-       WHERE batch_id IN (${placeholders}) AND is_active = 1
-       GROUP BY batch_id
-       HAVING image_id = MIN(image_id)`
-    )
-      .bind(...batches.map((b) => b.batch_id))
-      .all();
-    for (const row of coverRows.results || []) {
-      coverMap.set(
-        row.batch_id,
-        `/api/preview/${encodeURIComponent(row.image_id)}?batch_id=${encodeURIComponent(row.batch_id)}`
-      );
+    const batchesNeedingCover = batches.filter((b) => !b.cover_image_id);
+    if (batchesNeedingCover.length > 0) {
+      const placeholders = batchesNeedingCover.map(() => "?").join(", ");
+      const coverRows = await env.DB.prepare(
+        `SELECT batch_id, image_id
+         FROM images
+         WHERE batch_id IN (${placeholders}) AND is_active = 1
+         GROUP BY batch_id
+         HAVING image_id = MIN(image_id)`
+      )
+        .bind(...batchesNeedingCover.map((b) => b.batch_id))
+       .all();
+      for (const row of coverRows.results || []) {
+        coverMap.set(
+          row.batch_id,
+          `/api/preview/${encodeURIComponent(row.image_id)}?batch_id=${encodeURIComponent(row.batch_id)}`
+        );
+      }
     }
   }
 
   return json({
     batches: batches.map((b) => ({
       ...b,
-      cover_url: coverMap.get(b.batch_id) || "",
+      notes: b.notes || "",
+      cover_url: b.cover_image_id
+        ? `/api/preview/${encodeURIComponent(b.cover_image_id)}?batch_id=${encodeURIComponent(b.batch_id)}`
+        : coverMap.get(b.batch_id) || "",
     })),
   });
 }

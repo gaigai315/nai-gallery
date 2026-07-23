@@ -1,6 +1,7 @@
 import { hasUnlock, logAction } from "../_lib/db.js";
 import { requestAuditFields, readJson } from "../_lib/request.js";
 import { json, requireSession } from "../_lib/session.js";
+import { checkLimit, rateLimitResponse } from "../_lib/rate-limit.js";
 
 export async function onRequestPost({ request, env }) {
   const auth = await requireSession(request, env);
@@ -11,6 +12,10 @@ export async function onRequestPost({ request, env }) {
   const favorite = Boolean(body?.favorite);
   if (!batchId || !imageId) return json({ error: "bad_request" }, 400);
   if (!(await hasUnlock(env, auth.session.discord_id, batchId))) return json({ error: "not_unlocked" }, 403);
+
+  const favKey = `fav:${auth.session.discord_id}`;
+  const fv = checkLimit(favKey, 60_000, 10);
+  if (!fv.allowed) return rateLimitResponse(fv.retryAfter);
 
   if (favorite) {
     await env.DB.prepare(

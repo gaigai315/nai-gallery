@@ -11,16 +11,24 @@
 
     <div v-else-if="error" class="gallery-status">
       <p class="status-error">{{ error }}</p>
-      <button class="btn-outline" @click="fetchGallery">Retry</button>
+      <button class="btn-outline" @click="fetchGallery">重试</button>
     </div>
 
-    <template v-else>
+    <template v-else-if="!error">
     <div class="gallery-header">
       <h1>{{ batchName }}</h1>
+      <p v-if="batchNotes" class="batch-notes">{{ batchNotes }}</p>
       <p>{{ summary }}</p>
       <div class="inner-view-toggle">
-        <button :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'">Grid</button>
-        <button :class="{ active: viewMode === 'flip' }" @click="viewMode = 'flip'">Flip</button>
+        <button :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'">网格</button>
+        <button :class="{ active: viewMode === 'flip' }" @click="viewMode = 'flip'">翻页</button>
+      </div>
+    </div>
+
+    <div v-if="groupsData.length" class="group-notes-section">
+      <div v-for="g in groupsData" :key="g.group_id" class="group-note-item">
+        <span class="group-note-title">{{ g.title }}</span>
+        <span v-if="g.notes" class="group-note-text">{{ g.notes }}</span>
       </div>
     </div>
 
@@ -29,6 +37,19 @@
       :images="images"
       @open="openDetail"
     />
+
+    <!-- Infinite scroll sentinel (grid only) -->
+    <div
+      v-if="viewMode === 'grid'"
+      ref="sentinelRef"
+      class="scroll-sentinel"
+    />
+
+    <!-- Loading more indicator -->
+    <div v-if="loadingMore" class="loading-more">
+      <div class="skeleton-strip"></div>
+      <div class="skeleton-strip short"></div>
+    </div>
 
     <FlipBook
       v-if="viewMode === 'flip'"
@@ -39,9 +60,11 @@
     <DetailView
       :visible="detailVisible"
       :image="selectedImage"
+      :group="selectedGroup"
       @close="detailVisible = false"
       @download="handleDownload"
       @favorite="handleFavorite"
+      @navigate="navigateInGroup"
     />
     </template>
   </div>
@@ -57,45 +80,103 @@ import DetailView from "../components/DetailView.vue";
 
 const route = useRoute();
 const batchName = ref("");
+const batchNotes = ref("");
 const images = ref([]);
+const groupsData = ref([]);
+const total = ref(0);
 const loading = ref(true);
+const loadingMore = ref(false);
 const error = ref("");
+const sentinelRef = ref(null);
+let observer = null;
 
 const viewMode = ref("grid");
 const detailVisible = ref(false);
 const selectedImage = ref(null);
+const selectedGroup = ref(null);
 
-const summary = computed(() =>
-  images.value.length ? `${images.value.length} artworks` : ""
-);
+const summary = computed(() => {
+  const count = total.value || images.value.length;
+  return count ? `${count} 张作品` : "";
+});
+const hasMore = computed(() => images.value.length < total.value);
 
-async function fetchGallery() {
-  loading.value = true;
+async function fetchGallery(opts = {}) {
+  const isFirst = opts.offset === 0 || opts.offset === undefined;
+  if (isFirst) {
+    loading.value = true;
+  } else {
+    loadingMore.value = true;
+  }
   error.value = "";
+
+  const limit = opts.limit ?? (route.query.image ? 9999 : 50);
+  const offset = opts.offset ?? 0;
+
   try {
-    const data = await apiFetch(`/api/gallery/${route.params.batchId}`);
+    const data = await apiFetch(
+      `/api/gallery/${route.params.batchId}?limit=${limit}&offset=${offset}`
+    );
     batchName.value = data.batch?.batch_name || "";
-    images.value = data.images || [];
+    batchNotes.value = data.batch?.notes || "";
+    total.value = data.total || 0;
+    groupsData.value = data.groups || [];
+
+    if (isFirst) {
+      images.value = data.images || [];
+    } else {
+      images.value = [...images.value, ...(data.images || [])];
+    }
+
+    // Auto-open from query param after full load
+    if (isFirst && route.query.image) {
+      const targetId = route.query.image;
+      const targetImage = images.value.find((img) => img.image_id === targetId);
+      if (targetImage) {
+        const groupMap = new Map();
+        for (const img of images.value) {
+          const key = img.positive_prompt || img.prompt_preview || img.image_id;
+          if (!groupMap.has(key)) groupMap.set(key, { key, images: [] });
+          groupMap.get(key).images.push(img);
+        }
+        const targetKey = targetImage.positive_prompt || targetImage.prompt_preview || targetImage.image_id;
+        const targetGroup = groupMap.get(targetKey) || null;
+        setTimeout(() => openDetail(targetImage, targetGroup), 100);
+      }
+    }
   } catch (e) {
     if (e.code === "not_unlocked") {
       router.replace("/gallery");
       return;
     }
-    error.value = e.message || "Failed to load gallery";
+    error.value = e.message || "加载画廊失败";
   } finally {
     loading.value = false;
+    loadingMore.value = false;
   }
 }
 
-function openDetail(image) {
+function openDetail(image, group) {
   selectedImage.value = image;
+  selectedGroup.value = group || null;
   detailVisible.value = true;
+}
+
+function navigateInGroup(dir) {
+  if (!selectedGroup.value) return;
+  const imgs = selectedGroup.value.images;
+  const idx = imgs.findIndex(i => i.image_id === selectedImage.value.image_id);
+  if (idx === -1) return;
+  const next = idx + dir;
+  if (next < 0 || next >= imgs.length) return;
+  selectedImage.value = imgs[next];
 }
 
 async function handleDownload(image, asset = "image") {
   try {
     const data = await apiFetch("/api/download", {
       method: "POST",
+      silent: true,
       body: JSON.stringify({
         batch_id: image.batch_id,
         image_id: image.image_id,
@@ -119,6 +200,7 @@ async function handleFavorite(image) {
   try {
     await apiFetch("/api/favorite", {
       method: "POST",
+      silent: true,
       body: JSON.stringify({
         batch_id: image.batch_id,
         image_id: image.image_id,
@@ -131,19 +213,53 @@ async function handleFavorite(image) {
       images.value[idx] = { ...images.value[idx], is_favorite: newState ? 1 : 0 };
     }
   } catch (e) {
-    alert(e.message || "Failed to update favorite");
+    alert(e.message || "收藏更新失败");
   }
 }
 
 onMounted(() => {
   window.scrollTo(0, 0);
-  fetchGallery();
+  fetchGallery({ offset: 0 });
+
+  // IntersectionObserver for infinite scroll
+  if (window.IntersectionObserver) {
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore.value && !loadingMore.value && viewMode.value === 'grid') {
+          fetchGallery({ offset: images.value.length, limit: 50 });
+        }
+      },
+      { rootMargin: "200px" }
+    );
+  }
+});
+
+// Watch sentinel element to observe/unobserve
+watch(sentinelRef, (el) => {
+  if (observer) {
+    observer.disconnect();
+    if (el) observer.observe(el);
+  }
+});
+
+// When switching to flip mode, load all remaining images
+watch(viewMode, (mode) => {
+  if (mode === 'flip' && hasMore.value && !loadingMore.value) {
+    fetchGallery({ offset: images.value.length, limit: 9999 });
+  }
+  // Re-attach sentinel observer when switching back to grid
+  if (mode === 'grid' && sentinelRef.value && observer) {
+    observer.disconnect();
+    observer.observe(sentinelRef.value);
+  }
 });
 
 // Re-fetch when batchId changes (e.g. browser back/forward)
 watch(() => route.params.batchId, () => {
   if (route.params.batchId) {
-    fetchGallery();
+    images.value = [];
+    total.value = 0;
+    fetchGallery({ offset: 0 });
   }
 });
 </script>
@@ -164,7 +280,14 @@ watch(() => route.params.batchId, () => {
 
 .gallery-header { text-align: center; margin-bottom: 40px; }
 .gallery-header h1 { font-size: 24px; font-weight: normal; letter-spacing: 4px; margin-bottom: 8px; }
+.batch-notes { font-size: 13px; opacity: 0.5; letter-spacing: 1px; margin-bottom: 8px; max-width: 600px; margin-left: auto; margin-right: auto; }
 .gallery-header p { font-size: 12px; opacity: 0.6; letter-spacing: 2px; }
+
+.group-notes-section { max-width: 600px; margin: 0 auto 32px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.group-note-item { font-size: 12px; opacity: 0.5; display: flex; gap: 6px; align-items: baseline; }
+.group-note-title { font-weight: 500; }
+.group-note-text { opacity: 0.7; }
+.group-note-item:not(:last-child)::after { content: '·'; opacity: 0.3; }
 
 .inner-view-toggle {
   display: inline-flex; gap: 8px; margin-top: 16px;
@@ -176,6 +299,16 @@ watch(() => route.params.batchId, () => {
   color: var(--text); cursor: pointer; font-size: 12px; transition: background 0.3s, font-weight 0.3s;
 }
 .inner-view-toggle button.active { background: var(--glass-border); font-weight: bold; }
+
+.scroll-sentinel { height: 1px; }
+
+.loading-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 24px;
+}
 
 .gallery-status {
   display: flex;

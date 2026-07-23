@@ -1,10 +1,19 @@
 <template>
   <div id="bookshelf-view" class="view-container active">
-    <div class="view-toggle-bar" v-if="!loading && !error">
-      <div class="inner-view-toggle">
-        <button :class="{ active: isTarot }" @click="isTarot = true">Tarot</button>
-        <button :class="{ active: !isTarot }" @click="isTarot = false">Grid</button>
+    <div class="gallery-top-bar" v-if="!loading && !error">
+      <button class="view-circle" :title="isTarot ? '网格视图' : '塔罗视图'" @click="isTarot = !isTarot">
+        <svg v-if="isTarot" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+        <svg v-else viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+      </button>
+      <div class="module-pill">
+        <button class="active">画廊</button>
+        <button disabled>Vibe</button>
+        <button disabled>提示词</button>
+        <button disabled>抽卡</button>
       </div>
+      <button class="view-circle" title="搜索" @click="searchOpen = true">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+      </button>
     </div>
 
     <div v-if="loading" class="gallery-status">
@@ -14,52 +23,115 @@
 
     <div v-else-if="error" class="gallery-status">
       <p class="status-error">{{ error }}</p>
-      <button class="btn-outline" @click="fetchBatches">Retry</button>
+      <button class="btn-outline" @click="fetchBatches">重试</button>
     </div>
 
     <div v-else-if="!batchCards.length" class="gallery-status">
-      <p class="status-empty">No batches available yet.</p>
+      <p class="status-empty">暂无可用批次。</p>
     </div>
 
     <template v-else>
       <TarotDeck
         v-if="isTarot"
         :cards="batchCards"
+        :isAdmin="isAdmin"
         @unlock="openSeal"
+        @delete="confirmDelete"
       />
       <WaterfallGrid
         v-else
         :cards="batchCards"
+        :isAdmin="isAdmin"
         @unlock="openSeal"
+        @delete="confirmDelete"
       />
     </template>
+
+    <SearchOverlay v-model:visible="searchOpen" />
+
+    <AnnouncementModal :items="announcements" @dismiss="announcements = []" />
 
     <PasswordSeal
       :visible="sealVisible"
       :batch-name="selectedBatch?.batch_name || ''"
       :batch-id="selectedBatch?.batch_id || ''"
+      :notes="selectedBatch?.notes || ''"
       @close="sealVisible = false"
       @unlocked="handleUnlocked"
     />
+
+    <div v-if="timelineLabels.length" id="timeline-tooltip" ref="tooltipRef">{{ currentTimelineLabel }}</div>
+
+    <!-- 删除确认弹窗 -->
+    <Teleport to="body">
+      <div v-if="deleteTarget" class="modal-overlay" @click.self="deleteTarget = null">
+        <div class="modal-card">
+          <h3>确认删除</h3>
+          <p>确定要删除批次 <strong>{{ deleteTarget.batch_name }}</strong> 吗？</p>
+          <img v-if="deleteTarget.cover" :src="deleteTarget.cover" class="modal-cover" />
+          <p class="modal-stats">{{ deleteTarget.image_count || 0 }} 张图 · {{ deleteTarget.group_count || 0 }} 组 · {{ formatDate(deleteTarget.created_at) }}</p>
+          <p class="modal-warn">此操作不可撤销，批次内所有图片将被一并删除。</p>
+          <div class="modal-actions">
+            <button class="btn-outline" @click="deleteTarget = null">取消</button>
+            <button class="btn-danger" :disabled="deleting" @click="doDelete">{{ deleting ? '删除中...' : '确认删除' }}</button>
+          </div>
+          <p v-if="deleteError" class="status-error">{{ deleteError }}</p>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
+import { useRouter, onBeforeRouteLeave } from "vue-router";
 import { apiFetch } from "../lib/api.js";
+import { useUser } from "../stores/user.js";
 import TarotDeck from "../components/TarotDeck.vue";
 import WaterfallGrid from "../components/WaterfallGrid.vue";
 import PasswordSeal from "../components/PasswordSeal.vue";
+import SearchOverlay from "../components/SearchOverlay.vue";
+import AnnouncementModal from "../components/AnnouncementModal.vue";
 
 const router = useRouter();
+const { isAdmin } = useUser();
 
-const isTarot = ref(true);
+const isTarot = ref(localStorage.getItem('gallery_view') !== 'grid');
 const sealVisible = ref(false);
 const selectedBatch = ref(null);
 const batchCards = ref([]);
 const loading = ref(true);
 const error = ref("");
+const tooltipRef = ref(null);
+const currentTimelineLabel = ref("");
+
+const searchOpen = ref(false);
+
+const announcements = ref([]);
+
+const deleteTarget = ref(null);
+const deleting = ref(false);
+const deleteError = ref("");
+
+function formatDate(iso) {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString("zh-CN");
+  } catch {
+    return iso;
+  }
+}
+
+const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+
+const timelineLabels = computed(() => {
+  return batchCards.value
+    .filter(b => b.created_at)
+    .map(b => {
+      var d = new Date(b.created_at);
+      return d.getFullYear() + " " + MONTHS[d.getMonth()];
+    });
+});
 
 async function fetchBatches() {
   loading.value = true;
@@ -71,13 +143,17 @@ async function fetchBatches() {
       cover: b.cover_url || "",
     }));
   } catch (e) {
-    error.value = e.message || "Failed to load batches";
+    error.value = e.message || "加载批次失败";
   } finally {
     loading.value = false;
   }
 }
 
 function openSeal(batch) {
+  if (isAdmin.value) {
+    router.push('/gallery/' + batch.batch_id);
+    return;
+  }
   selectedBatch.value = batch;
   sealVisible.value = true;
 }
@@ -85,50 +161,158 @@ function openSeal(batch) {
 function handleUnlocked(batch) {
   sealVisible.value = false;
   if (batch?.batch_id) {
-    router.push(`/gallery/${batch.batch_id}`);
+    router.push('/gallery/' + batch.batch_id);
   }
+}
+
+function confirmDelete(batch) {
+  deleteTarget.value = batch;
+  deleteError.value = "";
+}
+
+async function doDelete() {
+  if (!deleteTarget.value) return;
+  deleting.value = true;
+  deleteError.value = "";
+  try {
+    await apiFetch("/api/admin/batches/" + deleteTarget.value.batch_id, { method: "DELETE" });
+    batchCards.value = batchCards.value.filter((b) => b.batch_id !== deleteTarget.value.batch_id);
+    deleteTarget.value = null;
+  } catch (e) {
+    deleteError.value = e.message || "删除失败";
+  } finally {
+    deleting.value = false;
+  }
+}
+
+let scrollTimeout;
+function onScroll() {
+  var el = tooltipRef.value;
+  if (!el || !batchCards.value.length) return;
+  el.style.opacity = "1";
+  var labels = timelineLabels.value;
+  if (!labels.length) return;
+  var scrollPct = window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight);
+  var idx = Math.min(labels.length - 1, Math.floor(scrollPct * labels.length));
+  currentTimelineLabel.value = labels[idx] || labels[0];
+
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(() => { el.style.opacity = "0"; }, 800);
 }
 
 onMounted(() => {
   fetchBatches();
+  checkAnnouncements();
+  window.addEventListener("scroll", onScroll);
+
+  const savedScroll = sessionStorage.getItem('gallery_scroll_y');
+  if (savedScroll) {
+    nextTick(() => window.scrollTo(0, Number(savedScroll)));
+  }
+});
+
+watch(isTarot, (v) => localStorage.setItem('gallery_view', v ? 'tarot' : 'grid'));
+
+onBeforeRouteLeave(() => {
+  sessionStorage.setItem('gallery_scroll_y', window.scrollY);
+});
+
+async function checkAnnouncements() {
+  try {
+    const data = await apiFetch("/api/announcements");
+    const all = data.announcements || [];
+    if (!all.length) return;
+    const lastRead = Number(localStorage.getItem("last_read_announcement_id") || 0);
+    const unread = all.filter((a) => a.id > lastRead);
+    if (unread.length) announcements.value = unread;
+  } catch { /* silent */ }
+}
+
+onUnmounted(() => {
+  window.removeEventListener("scroll", onScroll);
+  clearTimeout(scrollTimeout);
 });
 </script>
 
 <style scoped>
 #bookshelf-view {
-  padding-top: 100px;
+  padding-top: 80px;
   padding-bottom: 100px;
 }
 
-.view-toggle-bar {
+.gallery-top-bar {
   display: flex;
-  justify-content: center;
-  margin-bottom: 40px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  margin-bottom: 32px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--glass-border);
 }
 
-.inner-view-toggle {
+.view-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  flex-shrink: 0;
+  transition: background 0.3s, border-color 0.3s;
+}
+.view-circle:hover { background: var(--glass-border); }
+.view-circle svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.5; fill: none; }
+
+.module-pill {
   display: inline-flex;
   gap: 8px;
   background: var(--glass-bg);
   padding: 4px;
   border-radius: 20px;
   border: 1px solid var(--glass-border);
+  flex-shrink: 1;
+  overflow-x: auto;
 }
 
-.inner-view-toggle button {
+.module-pill button {
   background: transparent;
   border: none;
   padding: 6px 16px;
-  border-radius: 16px;
+  border-radius: 14px;
   color: var(--text);
   cursor: pointer;
   font-size: 12px;
-  transition: background 0.3s, font-weight 0.3s;
+  transition: background 0.3s;
+  white-space: nowrap;
+  opacity: 0.5;
+}
+.module-pill button.active { opacity: 1; background: var(--glass-border); font-weight: bold; }
+.module-pill button:disabled { opacity: 0.25; cursor: not-allowed; }
+
+@media (max-width: 600px) {
+  .gallery-top-bar { padding: 8px 12px; gap: 8px; }
+  .module-pill button { padding: 4px 10px; font-size: 11px; }
+  .view-circle { width: 34px; height: 34px; }
+  .view-circle svg { width: 16px; height: 16px; }
 }
 
-.inner-view-toggle button.active {
-  background: var(--glass-border);
-  font-weight: bold;
+@media (min-width: 769px) {
+  .gallery-top-bar {
+    border-radius: 0 0 24px 24px;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 960px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
 }
 
 .gallery-status {
@@ -160,6 +344,7 @@ onMounted(() => {
   font-size: 14px;
   opacity: 0.7;
   letter-spacing: 1px;
+  color: #c0392b;
 }
 
 .status-empty {
@@ -182,5 +367,48 @@ onMounted(() => {
 
 .btn-outline:hover {
   background: var(--glass-border);
+}
+
+.btn-danger {
+  padding: 10px 24px;
+  border-radius: 20px;
+  border: 1px solid #c0392b;
+  background: #c0392b;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  letter-spacing: 1px;
+  transition: opacity 0.3s;
+}
+.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-card {
+  background: var(--glass-bg); backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border); border-radius: 16px;
+  padding: 32px; max-width: 480px; width: 90%;
+}
+.modal-card h3 { font-size: 20px; font-weight: 500; margin-bottom: 16px; }
+.modal-card p { font-size: 14px; opacity: 0.8; margin-bottom: 8px; }
+.modal-cover { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; }
+.modal-stats { font-size: 12px !important; opacity: 0.6 !important; }
+.modal-warn { font-size: 12px !important; opacity: 0.6 !important; color: #c0392b; }
+.modal-actions { display: flex; gap: 12px; margin-top: 20px; justify-content: flex-end; }
+
+#timeline-tooltip {
+  position: fixed;
+  right: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  letter-spacing: 2px;
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+  writing-mode: vertical-rl;
 }
 </style>

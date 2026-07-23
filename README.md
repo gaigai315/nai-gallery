@@ -4,6 +4,16 @@ Lightweight private NAI gallery with Discord login, per-batch passwords, D1 audi
 
 ## Local setup
 
+### Quick dev (Vite HMR with mock API)
+
+```powershell
+npm run dev
+```
+
+Opens at http://localhost:5173. The dev server includes an in-memory mock API (/api/*) so you can click through the full admin flow without real backend. Click "Dev Mode" on the landing page to mock-login as admin.
+
+### Full local stack (Wrangler + D1 + R2)
+
 1. Install dependencies:
 
 ```powershell
@@ -42,26 +52,22 @@ Create an application in the Discord Developer Portal and add these redirect URI
 
 Use the production callback as `DISCORD_REDIRECT_URI` in Cloudflare Pages settings.
 
-## Creating a batch
+## Creating a batch (Admin UI)
 
-Prepare a manifest like `examples/batch-manifest.example.json`. Upload originals, previews, and TXT files to the matching private R2 keys, then generate SQL:
+Log in as admin (see below), navigate to `/admin`, and use the three-panel flow:
+
+1. **Batch list** -- view all batches with stats (image/group count, unlock/download counts). Expand a row to see per-user unlock and download activity.
+2. **Create** -- fill in batch name, optional slug and expiry. The generated password is shown once -- copy it before leaving this screen.
+3. **Upload** -- select the target batch, drop PNG/TXT file pairs. The UI auto-parses NAI metadata, groups by prompt, generates WebP thumbnails, and uploads directly to R2 via presigned URLs.
+
+The upload pipeline lives in `src/lib/upload.js` (metadata parsing + grouping + thumbnail + R2 sign, PUT, complete).
+
+### Admin initialization
+
+After first Discord login, promote your user to admin remotely:
 
 ```powershell
-npm run batch:create -- --id=2026-05-16 --name="May 16" --manifest=examples/batch-manifest.example.json --out=batch-2026-05-16.sql
+npx wrangler d1 execute nai-gallery --remote --command="UPDATE users SET role='admin' WHERE discord_id='YOUR_ID';"
 ```
 
-The script prints the private batch password. Share that password only with intended users. Do not commit generated batch SQL if it contains real object keys you consider private.
-
-Apply the SQL:
-
-```powershell
-npx wrangler d1 execute nai-gallery --file batch-2026-05-16.sql
-```
-
-## Security notes
-
-- The app records normal unlock, download, and favorite behavior. It cannot prevent screenshots, screen recordings, reposts, or shared temporary URLs.
-- Session cookies are HttpOnly, Secure, and SameSite=Lax.
-- Batch passwords are stored as PBKDF2-SHA256 hashes in D1.
-- IP addresses are stored only as salted hashes when `IP_HASH_SECRET` is configured.
-- Original files should never be committed to Git. Keep them in private R2 only.
+In dev (`npm run dev`), click "Dev Mode" on the landing page to mock-login as admin directly.

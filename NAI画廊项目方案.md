@@ -1,4 +1,4 @@
-# NAI Gallery — The Glasshouse (Project Plan)
+﻿# NAI Gallery — The Glasshouse (Project Plan)
 
 ## 架构
 
@@ -17,114 +17,115 @@ R2 Bucket (原始图片/TXT/预览图, 仅私有)
 
 ### 后端 (Functions) — 全部完成 ✅
 
-functions/_lib/ — 通用工具库
-- db.js — 用户查询、admin 检测、解锁检测、审计日志
-- crypto.js — HMAC-SHA256、SHA256、PBKDF2、base64url、constant-time
-- password.js — 密码哈希、随机 token、slugify
-- r2-sign.js — R2 预签名 URL（GET / PUT）
-- request.js — JSON 解析、审计字段
-- session.js — HMAC 签名 Session Cookie、requireSession、requireAdmin
-
-API endpoints:
-- GET /api/auth/discord — Discord OAuth 跳转
-- GET /api/auth/callback — OAuth 回调 -> 签发 Session
-- GET /api/me — 当前用户信息
-- GET /api/my-unlocks — 已解锁批次列表
-- POST /api/verify — 验证密码，写入解锁记录
-- GET /api/gallery/:batch_id — 批次内图片列表
-- POST /api/download — 限频 -> 日志 -> 返回 R2 预签名 URL
-- POST /api/favorite — 收藏/取消
-- POST /api/logout — 登出
-- GET /api/preview/:image_id — 预览图重定向
-- GET/POST /api/admin/batches — 批次管理
-- PATCH /api/admin/batches/:batch_id — 启用/停用/过期
-- POST /api/admin/uploads/sign — 签发上传 URL
-- POST /api/admin/uploads/complete — 提交 manifest
+17 个 API 端点全部实现：auth (discord + callback)、me、my-unlocks (LEFT JOIN + cover_url)、verify、gallery/:id (含 groups 列表)、download (限频)、favorite、logout、preview/:id、admin/batches (含 activity 子路由)、admin/stats、admin/uploads/sign、admin/uploads/complete、admin/images/:id (DELETE)
 
 ### 数据库 (D1) — 全部完成 ✅
 
-表结构：
-- users (含 role 列, 默认 user)
-- batches
-- prompt_groups (含 title, positive_prompt, negative_prompt, params_json)
-- images (含 group_id, seed, metadata_json, r2_key, preview_r2_key, txt_key)
-- user_batch_unlocks
-- favorites
-- access_logs
-- downloads_log
+8 张表，迁移文件 migrations/0001_initial.sql、migrations/0002_notes_cover.sql
 
-### 前端 (Vue 3) — 组件结构已完成，待对接 API
+### 前端 (Vue 3) — ✅
 
-src/
-  main.js / App.vue / router.js / styles.css
-
-  stores/
-    user.js     — 用户状态、auth guard、dev mock 登录
-    theme.js    — 日夜间切换 + localStorage + 系统偏好检测
-
-  components/
-    GlassNav.vue      — 玻璃导航栏（头像 hover 展开、主题切换、admin 入口、登出）
-    TarotDeck.vue     — 塔罗牌叠卡 + 拖拽滑动
-    WaterfallGrid.vue — 瀑布流模式
-    PasswordSeal.vue  — 密码解锁弹窗（调用 /api/verify）
-    ImageGrid.vue     — 网格视图
-    FlipBook.vue      — 翻页书视图
-    DetailView.vue    — 详情弹窗（毛玻璃、正负面分别复制、流光动画）
-
-  views/
-    LandingView.vue       — 未登录首页（Discord + Dev Mode 按钮）
-    GalleryView.vue       — 书架页（Tarot/Waterfall 模式切换 + 密码解锁）
-    InnerGalleryView.vue  — 画册内部（Grid/Flip 模式切换）
-    AdminView.vue         — 管理后台占位
+**stores:** user.js (含 dev mock 登录, sessionStorage 持久化)、theme.js
+**lib:** api.js (ApiError wrapper)、png-metadata.js (NAI PNG tEXt 解析)、upload.js (WebP 缩略图 + R2 直传)
+**components:** GlassNav、TarotDeck、WaterfallGrid、PasswordSeal (✅ 已集成密码锁设计)、ImageGrid (按 positive_prompt 分组)、FlipBook (页码指示器)、DetailView (组内左右导航)
+**views:** LandingView (Dev Mode 所有环境可用)、GalleryView (时间轴、删除弹窗、卡片备注)、InnerGalleryView (Grid/Flip + 分组导航 + 批次/分组备注 + download/favorite)、AdminView (完整管理后台: 统计+批次+上传+批次设置面板)
+**features:** 封面自定义 (cover_image_id)、批次备注 (卡片+内页展示)、分组备注 (上传面板+内页展示)、管理员免密进入批次
+**dev:** public/_routes.json、vite.config.js devApiPlugin (2 批次 6 图 3 组 mock 数据、完整 admin mock)
 
 ---
 
 ## 待完成
 
-### Phase 1: 基础设施
-- [ ] public/_routes.json — Cloudflare Pages SPA fallback 配置
+### Phase 3: NAI 元数据解析 ✅
+- [x] src/lib/png-metadata.js — 浏览器端解析 PNG tEXt chunks (prompt, seed, steps, cfg_scale, sampler 等)
+- [x] 解析失败降级为文件名导入
 
-### Phase 2: API 数据对接（替换 mock）
-- [ ] GalleryView 对接 /api/my-unlocks — 显示真实批次列表 + 已解锁/未解锁状态
-- [ ] InnerGalleryView 对接 /api/gallery/:batchId — 显示真实图片
-- [ ] DetailView 对接 /api/download — 下载限频 + 日志
-- [ ] DetailView 对接 /api/favorite — 收藏/取消
-- [ ] PasswordSeal 对接 /api/verify — 正式密码验证（dev 模式已 mock）
+### Phase 4: Admin 上传面板 ✅
+- [x] AdminView 单页三态流转 (list → create → upload)
+- [x] 批次管理 CRUD (创建/启用停用/删除)
+- [x] 批量上传 PNG/TXT
+- [x] 自动 metadata 解析 + prompt 分组预览
+- [x] 手动分组编辑 (移动/新建/重命名/合并/删除)
+- [x] 浏览器端 WebP 缩略图生成 (createImageBitmap + canvas)
+- [x] R2 直传 + manifest 提交
+- [x] 统计仪表盘 (总用户/总解锁/总下载)
+- [x] 管理员免密进入批次
+- [x] 主页删除弹窗 (封面 + 图片数 + 分组数)
 
-### Phase 3: NAI 元数据解析
-- [ ] src/lib/png-metadata.js — 浏览器端解析 PNG tEXt chunks
-  - 提取 positive prompt、negative prompt、seed、steps、cfg_scale 等
-  - 解析失败降级为文件名导入
+### Phase 6: Cloudflare 部署 ✅
+- [x] _routes.json 修正 (API 走 Functions、静态资产走 Pages)
+- [x] wrangler.toml 配置收尾
+- [x] .env.example 变量注释补全
+- [x] r2-cors.json CORS 配置
+- [x] 部署手册.md (分步清单 + 管理员初始化 + 本地验证)
 
-### Phase 4: Admin 上传面板
-- [ ] 批次管理（创建、查看、启用/停用）
-- [ ] 批量选择 PNG/TXT 上传
-- [ ] 自动读取 PNG metadata
-- [ ] 自动按正负面 prompt 分组预览
-- [ ] 手动分组编辑（移动、合并、新建、重命名）
-- [ ] 浏览器端生成 WebP 缩略图
-- [ ] 直传 R2（/api/admin/uploads/sign）
-- [ ] 提交 manifest（/api/admin/uploads/complete）
+## 待优化
 
-### Phase 5: 密码界面优化
-- [ ] 集成用户提供的密码锁设计
+按优先级排序，逐项实施。
 
----
+### 1. 密码验证性能优化 ✅
+已实施。PasswordSeal 传 batch_id，verify.js 精确单行查询。
 
-## 交互说明
+### 2. 后端限流 ✅
+已实施。新增 functions/_lib/rate-limit.js 内存滑动窗口，verify/download/favorite 三个端点均加限制。
 
-项目以 The Glasshouse 为品牌名，视觉风格为毛玻璃+柔和色系，支持日夜间切换。
+### 3. 内存限流器过期清理 ✅
+### 3. 内存限流器过期清理
+✅ 已实施。checkLimit 内置惰性全量清理，每 5 分钟扫描删除空 key。
 
-首页 -> 书架页（Tarot/Waterfall 展示各批次）
-  -> 点击中央卡牌 -> 密码弹窗
-    -> 输入密码验证 -> 进入画册内部
-      -> 网格/翻页书双模式浏览
-        -> 点击图片 -> 毛玻璃详情弹窗
-          -> 正负面 prompt 分别复制、下载原图/TXT、收藏
 
-批次组织方式待确认（按时间/主题/混合）。
-自动分组（prompt_groups）在后端和管理上传流程中使用，前端画廊默认扁平展示。
+### 4. 前端错误处理 ✅
+已实施。apiFetch 自动 toast 报错（支持 silent 选项），新增 Toast.vue 组件 + toast store。
+
+
+### 5. 图片级别管理
+
+**现状**：AdminView 只能管批次（创建/启用停用/删除/上传），不能单独查看某张图、删除单图、移动图片到其他分组。后端 `DELETE /api/admin/images/[image_id]` 已实现但前端无对应 UI。另：上传时只能保留原图 PNG，无法选择压缩为 JPEG；上传后也无法对已有图片做压缩归档。
+
+**方案**：三项功能合并在 AdminView 图片管理子视图中：
+
+**5a. 图片浏览与管理**
+- 左侧按批次+分组树形导航（筛选器）
+- 右侧缩略图网格（含 prompt_preview / seed / 宽高 / 上传时间）
+- 每图操作：删除（确认弹窗）、移动到其他分组（下拉选择）、压缩归档
+- 批量操作：多选 → 批量删除 / 批量压缩归档 / 批量移动分组
+
+**5b. 上传时格式选择**
+- AdminView 上传面板加「保存格式」开关：保留原图 PNG（默认）/ 压缩为 JPEG（quality 90）
+- 选 JPEG 时客户端在解析 metadata 后 canvas.toBlob('image/jpeg', 0.90) 再上传
+- sign 接口已支持 content_type，前端决定传 image/png 还是 image/jpeg
+
+**5c. 压缩归档（上传后）**
+- 图片管理视图中对已上传 PNG 执行压缩：R2 预签名下载 → canvas 转 JPEG → 重新上传 R2 → 更新 image 行 r2_key
+- 支持单图、批量选中、整批次一键压缩
+- 复用 upload.js 的 canvas 转换逻辑
+
+**涉及文件**：
+- `src/views/AdminView.vue` — 新增图片管理子视图 + 格式开关 + 压缩操作
+- `functions/api/admin/batches/[batch_id]/images` — 新增 GET（按批次列出图片含分组信息）
+- `functions/api/admin/groups` — 新增 GET（列出所有分组供移动下拉框）
+- `functions/api/admin/images/[image_id]` — PATCH 新增（更新图片分组/压缩后 r2_key）
+- `src/lib/upload.js` — 导出 compressImage 函数供复用
+
+### 4. 画廊分页
+
+**现状**：GET `/api/gallery/[batch_id]` 全量返回该批次所有图片及分组。图片数超过 100 时页面加载变慢、前端渲染吃力。
+
+**方案**：
+- 后端支持 `?limit=N&offset=M`（默认 50/offset 0）
+- 前端 InnerGalleryView 改无限滚动：滚动到底部自动加载下一批
+- FlipBook 模式不分页（翻页书必须持有全部图片），但首次加载可渐进渲染
+
+**涉及文件**：
+- `functions/api/gallery/[batch_id].js` — 读 query params 做 LIMIT/OFFSET
+- `src/views/InnerGalleryView.vue` — IntersectionObserver 无限滚动
+- `src/lib/api.js` — fetchGallery 传 params
+
 
 ## 管理员初始化
+
 站长先 Discord 登录一次，然后在 D1 手动执行：
-UPDATE users SET role="admin" WHERE discord_id="你的DiscordID";
+
+`sql
+UPDATE users SET role = 'admin' WHERE discord_id = '你的DiscordID';
+`
