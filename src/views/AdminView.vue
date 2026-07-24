@@ -270,6 +270,14 @@
                 {{ g.title || '未命名' }}
               </li>
             </ul>
+            <div class="new-group-zone">
+              <button v-if="!showNewGroupInput" class="btn-outline tiny" @click="showNewGroupInput = true">+ 新建分组</button>
+              <form v-else class="new-group-form" @submit.prevent="createGroup">
+                <input v-model="newGroupName" placeholder="分组名称" class="new-group-input" />
+                <button type="submit" class="btn-primary tiny">确定</button>
+                <button type="button" class="btn-outline tiny" @click="showNewGroupInput = false; newGroupName = ''">取消</button>
+              </form>
+            </div>
           </aside>
 
           <div class="images-main">
@@ -661,12 +669,35 @@ const imagesBatchName = ref('');
 const imagesData = ref([]);
 const imagesTotal = ref(0);
 const imagesTotalAll = ref(0);
+const showNewGroupInput = ref(false);
+const newGroupName = ref('');
 const imagesPage = ref(1);
 const imagesGroupFilter = ref('');
 const imagesSelected = ref(new Set());
 const imagesLoading = ref(false);
 const imagesError = ref('');
 const imageGroups = ref([]);
+
+async function createGroup() {
+  const name = newGroupName.value.trim();
+  if (!name || !imagesBatchId.value) return;
+  try {
+    await apiFetch('/api/admin/groups', { method: 'POST', body: JSON.stringify({ batch_id: imagesBatchId.value, title: name }) });
+    newGroupName.value = '';
+    showNewGroupInput.value = false;
+    fetchImageGroups();
+  } catch (e) {
+    uploadError.value = e.message || '创建分组失败';
+  }
+}
+
+async function fetchImageGroups() {
+  try {
+    const data = await apiFetch('/api/admin/groups');
+    const all = (data.groups || []).filter(g => g.batch_id === imagesBatchId.value);
+    imageGroups.value = all;
+  } catch {}
+}
 
 async function fetchImages() {
   if (!imagesBatchId.value) return;
@@ -686,27 +717,6 @@ async function fetchImages() {
     imagesLoading.value = false;
   }
 }
-
-async function fetchImageGroups() {
-  try {
-    const data = await apiFetch('/api/admin/groups');
-    imageGroups.value = (data.groups || []).filter((g) => g.batch_id === imagesBatchId.value);
-    const ctData = await apiFetch('/api/admin/batches/' + imagesBatchId.value + '/images?limit=1&offset=0');
-    imagesTotalAll.value = ctData.total || 0;
-  } catch { /* ignore */ }
-}
-
-function toggleImageSelect(id) {
-  const s = imagesSelected.value;
-  if (s.has(id)) s.delete(id); else s.add(id);
-}
-
-// ---- 删除图片 ----
-const deleteImageTarget = ref(null);
-const deletingImage = ref(false);
-const deleteImageError = ref('');
-
-function confirmDeleteImage(img) { deleteImageTarget.value = img; deleteImageError.value = ''; }
 
 async function doDeleteImage() {
   if (!deleteImageTarget.value) return;
@@ -1509,4 +1519,9 @@ onMounted(() => {
 }
 .pledge-editor h3 { font-size: 16px; margin-bottom: 8px; }
 .pledge-hint { font-size: 12px; opacity: 0.5; margin-bottom: 12px; }
+/* 新建分组 */
+.new-group-zone { margin-top: 12px; }
+.new-group-form { display: flex; gap: 6px; align-items: center; }
+.new-group-input { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--glass-border); background: transparent; color: var(--text); font-size: 12px; }
+.new-group-input:focus { outline: none; border-color: var(--secondary); }
 </style>

@@ -1,4 +1,24 @@
-import { json, requireAdmin } from "../../_lib/session.js";
+﻿import { json, requireAdmin } from "../../_lib/session.js";
+
+
+export async function onRequestPost({ request, env }) {
+  const auth = await requireAdmin(request, env);
+  if (auth.response) return auth.response;
+
+  const body = await request.json();
+  const { batch_id, title, notes } = body || {};
+
+  if (!batch_id || !title) {
+    return json({ error: "batch_id and title are required" }, 422);
+  }
+
+  const groupId = "grp-" + crypto.randomUUID();
+  await env.DB.prepare(
+    `INSERT INTO prompt_groups (group_id, batch_id, title, notes) VALUES (?, ?, ?, ?)`
+  ).bind(groupId, batch_id, title, notes || "").run();
+
+  return json({ ok: true, group_id: groupId });
+}
 
 export async function onRequestGet({ request, env }) {
   const auth = await requireAdmin(request, env);

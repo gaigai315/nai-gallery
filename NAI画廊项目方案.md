@@ -1,4 +1,4 @@
-﻿# NAI Gallery — The Glasshouse (Project Plan)
+# NAI Gallery — The Glasshouse (Project Plan)
 
 ## 架构
 
@@ -17,11 +17,11 @@ R2 Bucket (原始图片/TXT/预览图, 仅私有)
 
 ### 后端 (Functions) — 全部完成 ✅
 
-17 个 API 端点全部实现：auth (discord + callback)、me、my-unlocks (LEFT JOIN + cover_url)、verify、gallery/:id (含 groups 列表)、download (限频)、favorite、logout、preview/:id、admin/batches (含 activity 子路由)、admin/stats、admin/uploads/sign、admin/uploads/complete、admin/images/:id (DELETE)
+24+ 个 API 端点全部实现：auth (discord + callback)、me、my-unlocks (LEFT JOIN + cover_url)、verify、gallery/:id (含 groups 列表)、download (限频)、favorite、logout、preview/:id、admin/batches (含 activity 子路由)、admin/stats、admin/uploads/sign、admin/uploads/complete、admin/images/:id (DELETE)
 
 ### 数据库 (D1) — 全部完成 ✅
 
-8 张表，迁移文件 migrations/0001_initial.sql、migrations/0002_notes_cover.sql
+10 张表，迁移文件 migrations/0001_initial.sql、migrations/0002_notes_cover.sql
 
 ### 前端 (Vue 3) — ✅
 
@@ -70,15 +70,14 @@ R2 Bucket (原始图片/TXT/预览图, 仅私有)
 已实施。新增 functions/_lib/rate-limit.js 内存滑动窗口，verify/download/favorite 三个端点均加限制。
 
 ### 3. 内存限流器过期清理 ✅
-### 3. 内存限流器过期清理
-✅ 已实施。checkLimit 内置惰性全量清理，每 5 分钟扫描删除空 key。
+已实施。checkLimit 内置惰性全量清理，每 5 分钟扫描删除空 key。
 
 
 ### 4. 前端错误处理 ✅
 已实施。apiFetch 自动 toast 报错（支持 silent 选项），新增 Toast.vue 组件 + toast store。
 
 
-### 5. 图片级别管理
+### 5. 图片级别管理 ✅
 
 **现状**：AdminView 只能管批次（创建/启用停用/删除/上传），不能单独查看某张图、删除单图、移动图片到其他分组。后端 `DELETE /api/admin/images/[image_id]` 已实现但前端无对应 UI。另：上传时只能保留原图 PNG，无法选择压缩为 JPEG；上传后也无法对已有图片做压缩归档。
 
@@ -107,7 +106,7 @@ R2 Bucket (原始图片/TXT/预览图, 仅私有)
 - `functions/api/admin/images/[image_id]` — PATCH 新增（更新图片分组/压缩后 r2_key）
 - `src/lib/upload.js` — 导出 compressImage 函数供复用
 
-### 4. 画廊分页
+### 6. 画廊分页 ✅
 
 **现状**：GET `/api/gallery/[batch_id]` 全量返回该批次所有图片及分组。图片数超过 100 时页面加载变慢、前端渲染吃力。
 
@@ -121,6 +120,42 @@ R2 Bucket (原始图片/TXT/预览图, 仅私有)
 - `src/views/InnerGalleryView.vue` — IntersectionObserver 无限滚动
 - `src/lib/api.js` — fetchGallery 传 params
 
+
+---
+
+## Phase 9: 内容模块（进行中）
+
+### ✅ Vibe 专区（后端+前端已就绪，待联调）
+独立帖子系统，和画廊平行。管理员发帖管理，用户浏览下载。
+- 后端：GET /api/vibe, GET /api/vibe/:id, admin CRUD, upload-sign ✅
+- 前端：VibeListView.vue + VibePostView.vue（新建/编辑/多选删除）✅
+- 路由：/vibe, /vibe/:id ✅
+
+### ✅ 提示词专区（后端+前端已就绪，待联调）
+- 后端：GET /api/prompts, GET /api/prompts/:id, admin CRUD ✅
+- 前端：PromptListView.vue + PromptPostView.vue（一键复制+NAI参数+编辑模式）✅
+- 路由：/prompts, /prompts/:id ✅
+
+### ✅ 搜索
+SearchOverlay.vue 全屏毛玻璃覆盖层 + GET /api/search（prompt / batch）✅
+
+### ✅ 模块导航
+ModuleNav.vue，GalleryView 三区一行布局 ✅
+
+### [ ] Vibe/提示词联调
+### [x] Vibe/提示词联调
+上传管线接通（POST → compressToJpeg → upload-sign → PUT → PATCH）、例图 JPEG 压缩、预览 URL 修复、mock 同步更新
+
+### [ ] 其他模块（未开始）
+路由 /other，子功能：抽卡 / 许愿墙（提交+回复）/ 反馈（纯收集）/ 关于作者
+
+## 最近 UX 改进
+- [x] 删除按钮 hover 显示（TarotDeck + WaterfallGrid opacity 0→1）
+- [x] 收藏查看（FavoritesView + /favorites 路由）
+- [x] 备注移到密码弹窗（PasswordSeal）
+- [x] 模块导航重构（三区一行 + SearchOverlay）
+- [x] AdminView 齿轮图标
+- [x] 桌面 Grid 尺寸优化
 
 ## 管理员初始化
 

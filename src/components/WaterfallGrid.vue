@@ -30,31 +30,34 @@ defineEmits(["unlock", "delete"]);
 
 <style scoped>
 .waterfall-container {
-  column-count: 2;
-  column-gap: 32px;
-  max-width: 1000px;
+  column-count: 3;
+  column-gap: 24px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px;
 }
 
 .waterfall-card {
   break-inside: avoid;
-  margin-bottom: 32px;
-  border-radius: 24px;
+  margin-bottom: 24px;
+  border-radius: 20px;
   overflow: hidden;
   cursor: pointer;
   transition: transform 0.4s, box-shadow 0.4s;
   position: relative;
+  background: var(--glass-bg);
 }
 
 .waterfall-card img {
   width: 100%;
   display: block;
+  max-height: 480px;
+  object-fit: cover;
 }
 
 .waterfall-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px var(--glow);
+  transform: translateY(-6px);
+  box-shadow: 0 16px 36px var(--glow);
 }
 
 .card-delete-btn {
@@ -67,22 +70,38 @@ defineEmits(["unlock", "delete"]);
   border: 1px solid rgba(192,57,43,0.4);
   background: rgba(0,0,0,0.5);
   backdrop-filter: blur(4px);
+  opacity: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #e74c3c;
-  transition: background 0.2s;
+  transition: background 0.2s, opacity 0.15s;
   z-index: 10;
 }
 .card-delete-btn:hover {
   background: rgba(192,57,43,0.4);
 }
+.waterfall-card:hover .card-delete-btn {
+  opacity: 1;
+}
+
+@media (max-width: 1024px) {
+  .waterfall-container { column-count: 2; column-gap: 16px; }
+  .waterfall-card { margin-bottom: 20px; }
+}
+
+@media (min-width: 1800px) {
+  .waterfall-container { column-count: 4; column-gap: 20px; }
+}
 
 @media (max-width: 768px) {
   .waterfall-container {
     column-count: 2;
-    column-gap: 16px;
+    column-gap: 12px;
+    padding: 0 12px;
   }
+  .waterfall-card { margin-bottom: 16px; border-radius: 16px; }
+  .waterfall-card img { max-height: 300px; }
 }
 </style>

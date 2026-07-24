@@ -146,16 +146,20 @@ onUnmounted(() => {
   border: 1px solid rgba(192,57,43,0.4);
   background: rgba(0,0,0,0.5);
   backdrop-filter: blur(4px);
+  opacity: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #e74c3c;
-  transition: background 0.2s;
+  transition: background 0.2s, opacity 0.15s;
   z-index: 20;
 }
 .card-delete-btn:hover {
   background: rgba(192,57,43,0.4);
+}
+.tarot-card:hover .card-delete-btn {
+  opacity: 1;
 }
 
 @media (max-width: 768px) {

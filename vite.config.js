@@ -28,6 +28,16 @@ const mockGroups = [
   { group_id: "grp-003", batch_id: "dev-batch-001", title: "Abstract", notes: "\u5e9f\u7a3f\uff0c\u4e0d\u5efa\u8bae\u516c\u5f00", positive_prompt: "masterpiece, best quality, abstract, glass texture", negative_prompt: "lowres, bad anatomy", params: "Steps: 28, Sampler: Euler a, CFG scale: 7" },
 ];
 
+
+const mockVibePosts = [
+  { id: 1, title: 'Summer Vibe Collection', content: 'A set of summer-themed vibe transfer styles. Perfect for bright, warm illustrations.', images_json: JSON.stringify(['vibe_key_1', 'vibe_key_2']), files_json: JSON.stringify([{r2_key: 'file_key_1', file_name: 'summer_vibe_01.vibe', file_size: 2450000}, {r2_key: 'file_key_2', file_name: 'summer_vibe_02.vibe', file_size: 1820000}]), is_active: 1, created_at: new Date().toISOString() },
+  { id: 2, title: 'Gothic Dark Styles', content: 'Dark and moody vibe transfer presets for atmospheric scenes.', images_json: JSON.stringify(['vibe_key_3']), files_json: JSON.stringify([{r2_key: 'file_key_3', file_name: 'gothic_dark.vibe', file_size: 3100000}]), is_active: 1, created_at: new Date(Date.now() - 86400000).toISOString() },
+];
+
+const mockPromptPosts = [
+  { id: 1, title: '1girl garden masterpiece', content: 'masterpiece, best quality, 1girl, garden, flowers, sunlight, dappled light, soft focus', params_json: JSON.stringify({sampler: 'Euler a', steps: '28', cfg_scale: '7', seed: '12345678'}), images_json: JSON.stringify(['prompt_key_1', 'prompt_key_2']), is_active: 1, created_at: new Date().toISOString() },
+  { id: 2, title: 'Scenery landscape test', content: 'masterpiece, best quality, scenery, landscape, mountains, lake, reflection, dramatic sky', params_json: JSON.stringify({sampler: 'DPM++ 2M Karras', steps: '30', cfg_scale: '12', seed: '87654321'}), images_json: JSON.stringify(['prompt_key_3']), is_active: 1, created_at: new Date(Date.now() - 172800000).toISOString() },
+];
 const mockAnnouncements = [
   { id: 1, title: "Welcome to The Glasshouse", content: "A private AI gallery. Respect creators. No redistribution or commercial use.", image_url: null, is_active: 1, sort_order: 0, created_at: new Date().toISOString() },
   { id: 2, title: "Changelog", content: "2026-07-23: Added search, announcements, pledge system.", image_url: null, is_active: 1, sort_order: 1, created_at: new Date(Date.now() - 86400000).toISOString() },
@@ -59,6 +69,23 @@ function devApiPlugin() {
         if (url === "/my-unlocks" && method === "GET") { const unlocked = mockBatches.map((b) => ({ batch_id: b.batch_id, batch_name: b.batch_name, cover_url: coverSvg(b.batch_name), created_at: b.created_at, image_count: b.image_count, group_count: b.group_count, notes: b.notes || "" })); res.end(JSON.stringify({ batches: unlocked })); return; }
         if (url === "/my-favorites" && method === "GET") { res.end(JSON.stringify({ favorites: [{ image_id: "img-001", batch_id: "dev-batch-001", batch_name: "Dev Batch Alpha", prompt_preview: "masterpiece, 1girl, garden", preview_url: coverSvg("FAV 01"), favorited_at: new Date().toISOString() }, { image_id: "img-004", batch_id: "dev-batch-001", batch_name: "Dev Batch Alpha", prompt_preview: "masterpiece, scenery, sunset", preview_url: coverSvg("FAV 02"), favorited_at: new Date(Date.now() - 3600000).toISOString() }] })); return; }
         if (url === "/logout" && method === "POST") { res.end(JSON.stringify({ ok: true })); return; }
+        // ---- draw (random image from unlocked batches) ----
+        if (url === "/draw" && method === "GET") {
+          const img = mockImages[Math.floor(Math.random() * mockImages.length)];
+          const batch = mockBatches.find(function(b) { return b.batch_id === img.batch_id; });
+          res.end(JSON.stringify({
+            image_id: img.image_id, batch_id: img.batch_id,
+            batch_name: batch ? batch.batch_name : "Dev Batch",
+            preview_url: coverSvg("DRAW"), image_url: coverSvg("DRAW-FULL"),
+            prompt_preview: img.prompt_preview,
+            positive_prompt: "masterpiece, best quality, 1girl, garden",
+            negative_prompt: "lowres, bad anatomy",
+            seed: img.seed, steps: 28, cfg_scale: 7, sampler: "Euler a",
+            width: img.width, height: img.height,
+          }));
+          return;
+        }
+
 
         if (url?.startsWith("/gallery/") && method === "GET") {
           const batchId = url.split("/")[2] || "";
@@ -256,7 +283,125 @@ function devApiPlugin() {
           return;
         }
 
-        // ---- fallback ----
+        
+        // ---- vibe (public) ----
+        if (url === '/vibe' && method === 'GET') {
+          const posts = mockVibePosts.filter(p => p.is_active).map(p => {
+            let imgs = []; try { imgs = JSON.parse(p.images_json || '[]'); } catch {}
+            let files = []; try { files = JSON.parse(p.files_json || '[]'); } catch {}
+            return { id: p.id, title: p.title, content_preview: (p.content || '').slice(0, 80), image_count: imgs.length, file_count: files.length, first_image: imgs.length > 0 ? '/api/preview/' + imgs[0] : '', created_at: p.created_at };
+          });
+          res.end(JSON.stringify({ posts }));
+          return;
+        }
+        if (url?.match(/^\/vibe\/\d+$/) && method === 'GET') {
+          const id = Number(url.split('/')[2]);
+          const p = mockVibePosts.find(x => x.id === id);
+          if (!p) { res.statusCode = 404; res.end(JSON.stringify({ error: 'not_found' })); return; }
+          let imgs = []; try { imgs = JSON.parse(p.images_json || '[]'); } catch {}
+          let files = []; try { files = JSON.parse(p.files_json || '[]'); } catch {}
+          res.end(JSON.stringify({ id: p.id, title: p.title, content: p.content || '', images: imgs.map(k => '/api/preview/' + k), files: files.map(f => ({ name: f.file_name, size: f.file_size, url: '/api/download/vibe/' + p.id + '/' + f.r2_key })), created_at: p.created_at }));
+          return;
+        }
+
+        // ---- vibe admin ----
+        if (url === '/admin/vibe' && method === 'GET') {
+          res.end(JSON.stringify({ posts: mockVibePosts }));
+          return;
+        }
+        if (url === '/admin/vibe' && method === 'POST') {
+          const body = await readBody(req);
+          const id = Date.now();
+          const post = { id, title: body.title || '', content: body.content || '', images_json: body.images_json || '[]', files_json: body.files_json || '[]', is_active: 1, created_at: new Date().toISOString() };
+          mockVibePosts.unshift(post);
+          res.end(JSON.stringify({ ok: true, id }));
+          return;
+        }
+        if (url?.match(/^\/admin\/vibe\/\d+$/) && method === 'PATCH') {
+          const id = Number(url.split('/')[3]);
+          const body = await readBody(req);
+          const p = mockVibePosts.find(x => x.id === id);
+          if (!p) { res.statusCode = 404; res.end(JSON.stringify({ error: 'not_found' })); return; }
+          ['title','content','images_json','files_json','is_active'].forEach(k => { if (body[k] !== undefined) p[k] = body[k]; });
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+        if (url?.match(/^\/admin\/vibe\/\d+$/) && method === 'DELETE') {
+          const id = Number(url.split('/')[3]);
+          const idx = mockVibePosts.findIndex(x => x.id === id);
+          if (idx === -1) { res.statusCode = 404; res.end(JSON.stringify({ error: 'not_found' })); return; }
+          mockVibePosts.splice(idx, 1);
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+        if (url === '/admin/vibe/upload-sign' && method === 'POST') {
+          const body = await readBody(req);
+          const files = Array.isArray(body.files) ? body.files : [];
+          const entries = files.map((f, i) => ({ key: 'vibe/' + Date.now() + '_' + (f.file_name || 'file'), url: 'https://dev-r2-placeholder.local/vibe/' + Date.now() + '_' + (f.file_name || 'file'), file_name: f.file_name, content_type: f.content_type || 'application/octet-stream' }));
+          res.end(JSON.stringify({ entries }));
+          return;
+        }
+
+        // ---- prompts upload-sign ----
+        if (url === '/admin/prompts/upload-sign' && method === 'POST') {
+          const body = await readBody(req);
+          const files = Array.isArray(body.files) ? body.files : [];
+          const entries = files.map((f, i) => ({ key: 'prompts/' + Date.now() + '_' + (f.file_name || 'file'), url: 'https://dev-r2-placeholder.local/prompts/' + Date.now() + '_' + (f.file_name || 'file'), file_name: f.file_name, content_type: f.content_type || 'application/octet-stream' }));
+          res.end(JSON.stringify({ entries }));
+          return;
+        }
+
+        // ---- prompts (public) ----
+        if (url === '/prompts' && method === 'GET') {
+          const posts = mockPromptPosts.filter(p => p.is_active).map(p => {
+            let imgs = []; try { imgs = JSON.parse(p.images_json || '[]'); } catch {}
+            return { id: p.id, title: p.title, content_preview: (p.content || '').slice(0, 80), image_count: imgs.length, first_image: imgs.length > 0 ? '/api/preview/' + imgs[0] : '', created_at: p.created_at };
+          });
+          res.end(JSON.stringify({ posts }));
+          return;
+        }
+        if (url?.match(/^\/prompts\/\d+$/) && method === 'GET') {
+          const id = Number(url.split('/')[2]);
+          const p = mockPromptPosts.find(x => x.id === id);
+          if (!p) { res.statusCode = 404; res.end(JSON.stringify({ error: 'not_found' })); return; }
+          let imgs = []; try { imgs = JSON.parse(p.images_json || '[]'); } catch {}
+          let params = null; try { params = JSON.parse(p.params_json || 'null'); } catch {}
+          res.end(JSON.stringify({ id: p.id, title: p.title, content: p.content, params, images: imgs.map(k => '/api/preview/' + k), created_at: p.created_at }));
+          return;
+        }
+
+        // ---- prompts admin ----
+        if (url === '/admin/prompts' && method === 'GET') {
+          res.end(JSON.stringify({ posts: mockPromptPosts }));
+          return;
+        }
+        if (url === '/admin/prompts' && method === 'POST') {
+          const body = await readBody(req);
+          const id = Date.now();
+          const post = { id, title: body.title || '', content: body.content || '', params_json: body.params_json || null, images_json: body.images_json || '[]', is_active: 1, created_at: new Date().toISOString() };
+          mockPromptPosts.unshift(post);
+          res.end(JSON.stringify({ ok: true, id }));
+          return;
+        }
+        if (url?.match(/^\/admin\/prompts\/\d+$/) && method === 'PATCH') {
+          const id = Number(url.split('/')[3]);
+          const body = await readBody(req);
+          const p = mockPromptPosts.find(x => x.id === id);
+          if (!p) { res.statusCode = 404; res.end(JSON.stringify({ error: 'not_found' })); return; }
+          ['title','content','params_json','images_json','is_active'].forEach(k => { if (body[k] !== undefined) p[k] = body[k]; });
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+        if (url?.match(/^\/admin\/prompts\/\d+$/) && method === 'DELETE') {
+          const id = Number(url.split('/')[3]);
+          const idx = mockPromptPosts.findIndex(x => x.id === id);
+          if (idx === -1) { res.statusCode = 404; res.end(JSON.stringify({ error: 'not_found' })); return; }
+          mockPromptPosts.splice(idx, 1);
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+
+// ---- fallback ----
         res.statusCode = 503;
         res.end(JSON.stringify({ error: "unavailable_in_dev" }));
       });
