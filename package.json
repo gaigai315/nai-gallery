@@ -4,7 +4,7 @@
     "description":  "NAI 私人画廊 — Discord 登录、密码解锁、D1 + R2 存储的轻量级图片分享平台",
     "author":  "The Glasshouse Authors",
     "license":  "SEE LICENSE IN LICENSE",
-    "repository":  "https://github.com/your-username/nai-gallery",
+    "repository":  "https://github.com/vesselgugugu-afk/nai-gallery",
     "private":  true,
     "type":  "module",
     "scripts":  {
