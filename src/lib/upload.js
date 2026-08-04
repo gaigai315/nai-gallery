@@ -7,6 +7,23 @@
 import { parseNaiPng } from "./png-metadata.js";
 import { apiFetch } from "./api.js";
 
+/**
+ * Simple normalize: remove filter words from a comma-separated prompt.
+ * Used for group-key matching so variants like "1girl" vs "1boy"
+ * from the same prompt series are treated as the same group.
+ * @param {string} prompt
+ * @param {string[]} filterWords
+ * @returns {string}
+ */
+function normalizePrompt(prompt, filterWords) {
+  if (!prompt || !filterWords || !filterWords.length) return (prompt || "").trim();
+  const filterSet = new Set(filterWords.map(w => w.toLowerCase().trim()));
+  const parts = prompt.split(",").map(p => p.trim());
+  const kept = parts.filter(p => !filterSet.has(p.toLowerCase()));
+  return kept.join(", ").trim();
+}
+
+
 const MAX_LONG_EDGE = 960;
 const WEBP_QUALITY = 0.82;
 const JPEG_QUALITY = 0.90;
@@ -22,7 +39,7 @@ export function baseName(name) {
  * Build the in-memory upload plan from raw File objects.
  * Pairs PNG <-> TXT by base name, parses NAI metadata, clusters into groups.
  */
-export async function buildUploadPlan(files) {
+export async function buildUploadPlan(files, filterWords = []) {
   const pngs = [];
   const txts = new Map();
   for (const f of files) {
@@ -54,8 +71,9 @@ export async function buildUploadPlan(files) {
     entries.push(entry);
 
     if (meta) {
-      const pos = meta.positive_prompt || "";
+      const rawPos = meta.positive_prompt || "";
       const neg = meta.negative_prompt || "";
+      const pos = normalizePrompt(rawPos, filterWords);
       const key = `${pos}\u0000${neg}`;
       let g = groupMap.get(key);
       if (!g) {

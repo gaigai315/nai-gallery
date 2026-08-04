@@ -1,4 +1,4 @@
-import { createSessionCookie } from "../../_lib/session.js";
+﻿import { createSessionCookie } from "../../_lib/session.js";
 import { upsertUser } from "../../_lib/db.js";
 import { base64UrlEncode, hmacSha256 } from "../../_lib/crypto.js";
 
@@ -50,6 +50,35 @@ export async function onRequestGet({ request, env }) {
   if (!userResponse.ok) return Response.redirect(`${env.PUBLIC_BASE_URL || url.origin}/?auth=failed`, 302);
 
   const user = await userResponse.json();
+
+  // Discord guild + role verification (optional — skips if DISCORD_GUILD_ID not set)
+  // Supports comma-separated guild IDs: in any one of them passes
+  if (env.DISCORD_GUILD_ID) {
+    const guildIds = env.DISCORD_GUILD_ID.split(',').map(s => s.trim()).filter(Boolean);
+    let inGuild = false;
+    let memberRoles = [];
+    for (const gid of guildIds) {
+      const memberUrl = https://discord.com/api/users/@me/guilds//member;
+      const memberResp = await fetch(memberUrl, {
+        headers: { Authorization: Bearer  },
+      });
+      if (memberResp.ok) {
+        inGuild = true;
+        if (env.DISCORD_REQUIRED_ROLE_ID) {
+          const member = await memberResp.json();
+          memberRoles = member.roles || [];
+        }
+        break;
+      }
+    }
+    if (!inGuild) {
+      return Response.redirect(${env.PUBLIC_BASE_URL || url.origin}/?auth=not_in_guild, 302);
+    }
+    if (env.DISCORD_REQUIRED_ROLE_ID && !memberRoles.includes(env.DISCORD_REQUIRED_ROLE_ID)) {
+      return Response.redirect(${env.PUBLIC_BASE_URL || url.origin}/?auth=role_denied, 302);
+    }
+  }
+
   await upsertUser(env, user);
   const cookie = await createSessionCookie(env, user.id);
   const headers = new Headers({ Location: `${env.PUBLIC_BASE_URL || url.origin}/` });

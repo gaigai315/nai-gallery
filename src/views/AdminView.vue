@@ -30,8 +30,28 @@
       <section v-if="view === 'list'" class="admin-card">
         <div class="list-toolbar">
           <h2>批次列表</h2>
-          <button class="btn-primary" @click="view = 'create'">+ 新建批次</button>
-          <button class="btn-outline" @click="openAnnouncements">公告管理</button>
+          <div class="toolbar-actions">
+            <button class="btn-primary" @click="view = 'create'">+ 新建批次</button>
+            <button class="btn-more" @click.stop="showMoreMenu = !showMoreMenu">
+              <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+              <span>更多</span>
+            </button>
+            <div v-if="showMoreMenu" class="more-dropdown" @click.stop>
+              <button class="btn-outline" @click="openAnnouncements(); showMoreMenu = false">公告管理</button>
+              <button class="btn-outline" @click="openFeedbacks(); showMoreMenu = false">反馈查看</button>
+              <button class="btn-outline" @click="openFilterWords(); showMoreMenu = false">过滤词</button>
+              <button class="btn-outline" @click="openUsers(); showMoreMenu = false">用户管理</button>
+              <button class="btn-outline" @click="openDownloads(); showMoreMenu = false">下载记录</button>
+            </div>
+          </div>
+          <div class="toolbar-desktop-actions">
+            <button class="btn-primary" @click="view = 'create'">+ 新建批次</button>
+            <button class="btn-outline" @click="openAnnouncements">公告管理</button>
+            <button class="btn-outline" @click="openFeedbacks">反馈查看</button>
+            <button class="btn-outline" @click="openFilterWords">过滤词</button>
+            <button class="btn-outline" @click="openUsers">用户管理</button>
+            <button class="btn-outline" @click="openDownloads">下载记录</button>
+          </div>
         </div>
 
         <p v-if="batchLoading" class="admin-placeholder">加载中...</p>
@@ -434,6 +454,119 @@
       </div>
     </section>
 
+    <!-- 过滤词管理视图 -->
+    <section v-if="view === 'filter-words'" class="admin-card">
+      <div class="list-toolbar">
+        <h2>过滤词管理</h2>
+        <button class="btn-outline" @click="view = 'list'">← 返回列表</button>
+      </div>
+      <p class="pledge-hint">上传时忽略这些词，同一串的不同变体（如 1girl / 1boy）会自动归入一组。原提示词不受影响。</p>
+      <div class="filter-tags">
+        <span v-for="(w, i) in filterWords" :key="i" class="filter-tag">
+          {{ w }}
+          <button class="tag-remove" @click="filterWords.splice(i, 1)">×</button>
+        </span>
+        <span v-if="!filterWords.length" style="opacity:0.4;font-size:13px">还没有过滤词，在下方添加</span>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:12px">
+        <input v-model="newFilterWord" class="field-input" placeholder="输入过滤词，如 1girl" style="flex:1" @keyup.enter="addFilterWord" />
+        <button class="btn-outline" @click="addFilterWord">添加</button>
+      </div>
+      <div style="margin-top:16px">
+        <button class="btn-primary" :disabled="filterSaving" @click="doSaveFilterWords">
+          {{ filterSaving ? '保存中...' : '保存过滤词' }}
+        </button>
+      </div>
+    </section>
+
+    <!-- 反馈查看视图 -->
+    <section v-if="view === 'feedbacks'" class="admin-card">
+      <div class="list-toolbar">
+        <h2>反馈列表</h2>
+        <button class="btn-outline" @click="view = 'list'">← 返回列表</button>
+      </div>
+      <div v-if="feedbackLoading" class="admin-placeholder">加载中...</div>
+      <div v-else-if="!feedbacks.length" class="empty-state">
+        <p>暂无反馈</p>
+      </div>
+      <ul v-else class="batch-list">
+        <li v-for="f in feedbacks" :key="f.id" class="batch-row-wrap">
+          <div class="batch-row">
+            <div class="batch-info">
+              <span class="batch-name">{{ f.username || '匿名' }}</span>
+              <span class="batch-meta">{{ f.content?.slice(0, 200) }}</span>
+              <span class="batch-meta">{{ formatDate(f.created_at) }}</span>
+            </div>
+            <div class="batch-actions">
+              <button class="icon-btn small" title="删除" @click="deleteFeedback(f)">×</button>
+            </div>
+          </div>
+        </li>
+      </ul>
+      <div v-if="feedbackTotal > feedbacks.length" style="text-align:center;margin-top:12px">
+        <button class="btn-outline" @click="fetchFeedbacks(feedbacks.length)">加载更多</button>
+      </div>
+    </section>
+
+    <!-- 用户管理 -->
+    <section v-if="view === 'users'" class="admin-card">
+      <div class="list-toolbar">
+        <h2>用户管理</h2>
+        <button class="btn-outline" @click="view = 'list'">← 返回列表</button>
+      </div>
+      <div v-if="usersLoading" class="admin-placeholder">加载中...</div>
+      <div v-else-if="!users.length" class="empty-state"><p>暂无用户</p></div>
+      <table v-else class="data-table">
+        <thead>
+          <tr><th>用户</th><th>角色</th><th>解锁数</th><th>下载数</th><th>最后活跃</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="u in users" :key="u.discord_id">
+            <td><strong>{{ u.username }}</strong><br /><small>{{ u.discord_id }}</small></td>
+            <td><span :class="['role-badge', u.role]">{{ u.role === 'admin' ? '管理员' : '用户' }}</span></td>
+            <td>{{ u.unlock_count }}</td>
+            <td>{{ u.download_count }}</td>
+            <td>{{ u.last_active ? formatDate(u.last_active) : '从未' }}</td>
+            <td>
+              <button v-if="u.role === 'user'" class="btn-outline small" @click="promoteUser(u.discord_id)">提权</button>
+              <button v-else-if="u.role === 'admin'" class="btn-outline small" @click="demoteUser(u.discord_id)">降权</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 下载记录 -->
+    <section v-if="view === 'downloads'" class="admin-card">
+      <div class="list-toolbar">
+        <h2>下载记录</h2>
+        <button class="btn-outline" @click="view = 'list'">← 返回列表</button>
+      </div>
+      <div class="filter-row">
+        <input v-model="dlUserFilter" placeholder="按用户ID筛选..." class="filter-input" @input="debounceFetchDownloads" />
+        <input v-model="dlBatchFilter" placeholder="按批次ID筛选..." class="filter-input" @input="debounceFetchDownloads" />
+      </div>
+      <div v-if="dlLoading" class="admin-placeholder">加载中...</div>
+      <div v-else-if="!downloads.length" class="empty-state"><p>暂无记录</p></div>
+      <table v-else class="data-table">
+        <thead>
+          <tr><th>用户</th><th>图片</th><th>批次</th><th>类型</th><th>时间</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="d in downloads" :key="d.id">
+            <td><strong>{{ d.username }}</strong></td>
+            <td><small>{{ d.image_id }}</small></td>
+            <td>{{ d.batch_name || d.batch_id }}</td>
+            <td>{{ d.asset === 'txt' ? 'TXT' : '图片' }}</td>
+            <td>{{ formatDate(d.timestamp || d.created_at) }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-if="dlTotal > downloads.length" style="text-align:center;margin-top:12px">
+        <button class="btn-outline" @click="fetchDownloads(downloads.length)">加载更多</button>
+      </div>
+    </section>
+
     <!-- 批次设置弹窗 -->
     <Teleport to="body">
       <div v-if="settingsTarget" class="modal-overlay" @click.self="closeSettings">
@@ -462,10 +595,15 @@
             </div>
           </div>
 
-          <div class="modal-actions">
+          <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
             <button class="btn-outline" @click="settingsCoverId = null" v-if="settingsCoverId">清除封面（使用默认）</button>
+            <button class="btn-outline" @click="resetBatchPassword(settingsTarget.batch_id)" :disabled="resetPwdLoading">{{ resetPwdLoading ? '生成中...' : '重置密码' }}</button>
             <button class="btn-outline" @click="closeSettings">取消</button>
             <button class="btn-primary" :disabled="settingsSaving" @click="saveSettings">{{ settingsSaving ? '保存中...' : '保存设置' }}</button>
+          </div>
+          <div v-if="newPassword" class="new-pwd-display" style="margin-top:12px;padding:8px 12px;background:var(--glass-bg);border-radius:8px">
+            新密码：<code style="font-size:16px;font-weight:bold">{{ newPassword }}</code>
+            <button class="btn-outline small" @click="copyToClipboard(newPassword)" style="margin-left:8px">复制</button>
           </div>
           <p v-if="settingsError" class="status-error">{{ settingsError }}</p>
         </div>
@@ -582,6 +720,10 @@ import { apiFetch } from '../lib/api.js';
 import { buildUploadPlan, makeThumbnail, uploadBatch, moveEntryToGroup, compressToJpeg, SIGN_FILE_LIMIT } from '../lib/upload.js';
 
 const view = ref('list');
+const showMoreMenu = ref(false);
+const filterWords = ref([]);
+const newFilterWord = ref("");
+const filterSaving = ref(false);
 
 // ---- 统计仪表盘 ----
 const stats = reactive({ total_users: 0, total_unlocks: 0, total_downloads: 0 });
@@ -1079,6 +1221,83 @@ async function savePledgeText() {
   }
 }
 
+
+// ---- 反馈查看 ----
+const feedbacks = ref([]);
+const feedbackLoading = ref(false);
+const feedbackTotal = ref(0);
+
+async function fetchFeedbacks(offset = 0) {
+  feedbackLoading.value = true;
+  try {
+    const data = await apiFetch('/api/admin/feedbacks?offset=' + offset + '&limit=20');
+    if (offset === 0) feedbacks.value = data.feedbacks || [];
+    else feedbacks.value.push(...(data.feedbacks || []));
+    feedbackTotal.value = data.total || 0;
+  } catch (e) {
+    /* ignore */
+  } finally {
+    feedbackLoading.value = false;
+  }
+}
+
+async function openFeedbacks() {
+  view.value = 'feedbacks';
+  feedbacks.value = [];
+  await fetchFeedbacks(0);
+}
+
+async function deleteFeedback(f) {
+  if (!confirm('确定要删除这条反馈吗？')) return;
+  try {
+    await apiFetch('/api/admin/feedbacks/' + f.id, { method: 'DELETE' });
+    feedbacks.value = feedbacks.value.filter(x => x.id !== f.id);
+    feedbackTotal.value = Math.max(0, feedbackTotal.value - 1);
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+
+// ---- 过滤词 ----
+function addFilterWord() {
+  const w = newFilterWord.value.trim();
+  if (!w || filterWords.value.includes(w)) { newFilterWord.value = ""; return; }
+  filterWords.value.push(w);
+  newFilterWord.value = "";
+}
+
+async function doSaveFilterWords() {
+  filterSaving.value = true;
+  try {
+    await saveFilterWords([...filterWords.value]);
+  } catch (e) {
+    /* ignore */
+  } finally {
+    filterSaving.value = false;
+  }
+}
+
+async function fetchFilterWords() {
+  try {
+    const data = await apiFetch("/api/admin/filter-words");
+    filterWords.value = data.words || [];
+  } catch { filterWords.value = []; }
+}
+
+async function saveFilterWords(newWords) {
+  await apiFetch("/api/admin/filter-words", {
+    method: "POST",
+    body: JSON.stringify({ words: newWords }),
+  });
+  filterWords.value = newWords;
+}
+
+function openFilterWords() {
+  view.value = "filter-words";
+  fetchFilterWords();
+}
+
 // ---- 新建批次 ----
 const createForm = ref({ batch_name: '', batch_id: '', expire_at: '' });
 const creating = ref(false);
@@ -1153,7 +1372,7 @@ async function handleFiles(fileList) {
   uploadError.value = '';
   uploadResult.value = null;
   try {
-    const plan = await buildUploadPlan(files);
+    const plan = await buildUploadPlan(files, filterWords.value);
     entries.value = plan.entries;
     groups.value = plan.groups;
     plan.entries.forEach((e) => makeThumbnail(e).catch(() => null));
@@ -1267,7 +1486,90 @@ function formatDate(iso) {
 onMounted(() => {
   fetchStats();
   fetchBatches();
+  document.addEventListener('click', onDocClick);
 });
+// Click-outside handler for more menu
+function onDocClick(e) {
+  const moreBtn = document.querySelector('.btn-more');
+  const dropdown = document.querySelector('.more-dropdown');
+  if (moreBtn && !moreBtn.contains(e.target) && dropdown && !dropdown.contains(e.target)) {
+    showMoreMenu.value = false;
+  }
+}
+
+// ---- 用户管理 ----
+function openUsers() { view.value = 'users'; fetchUsers(); }
+async function fetchUsers() {
+  usersLoading.value = true;
+  try {
+    const data = await apiFetch('/api/admin/users');
+    users.value = data.users || [];
+  } catch (e) {
+    users.value = [];
+  } finally {
+    usersLoading.value = false;
+  }
+}
+async function promoteUser(discordId) {
+  if (!confirm('确定将该用户提升为管理员？')) return;
+  try {
+    await apiFetch('/api/admin/users/' + discordId, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) });
+    const u = users.value.find(x => x.discord_id === discordId);
+    if (u) u.role = 'admin';
+  } catch (e) { /* toast handled by apiFetch */ }
+}
+async function demoteUser(discordId) {
+  if (!confirm('确定将该用户降级为普通用户？')) return;
+  try {
+    await apiFetch('/api/admin/users/' + discordId, { method: 'PATCH', body: JSON.stringify({ role: 'user' }) });
+    const u = users.value.find(x => x.discord_id === discordId);
+    if (u) u.role = 'user';
+  } catch (e) { /* toast handled by apiFetch */ }
+}
+
+// ---- 下载记录 ----
+function openDownloads() { view.value = 'downloads'; downloads.value = []; dlTotal.value = 0; fetchDownloads(0); }
+async function fetchDownloads(offset = 0) {
+  dlLoading.value = true;
+  try {
+    let url = '/api/admin/downloads?limit=50&offset=' + offset;
+    if (dlUserFilter.value) url += '&user=' + encodeURIComponent(dlUserFilter.value);
+    if (dlBatchFilter.value) url += '&batch=' + encodeURIComponent(dlBatchFilter.value);
+    const data = await apiFetch(url);
+    if (offset === 0) downloads.value = data.downloads || [];
+    else downloads.value = [...downloads.value, ...(data.downloads || [])];
+    dlTotal.value = data.total || downloads.value.length;
+  } catch (e) {
+    if (offset === 0) downloads.value = [];
+  } finally {
+    dlLoading.value = false;
+  }
+}
+function debounceFetchDownloads() {
+  clearTimeout(dlDebounceTimer);
+  dlDebounceTimer = setTimeout(() => { downloads.value = []; dlTotal.value = 0; fetchDownloads(0); }, 400);
+}
+
+// ---- 重置密码 ----
+async function resetBatchPassword(batchId) {
+  if (!confirm('确定要重置该批次的密码吗？旧密码将立即失效。')) return;
+  resetPwdLoading.value = true;
+  newPassword.value = '';
+  try {
+    const data = await apiFetch('/api/admin/batches/' + batchId + '/reset-password', { method: 'POST' });
+    newPassword.value = data.password;
+  } catch (e) {
+    /* toast handled by apiFetch */
+  } finally {
+    resetPwdLoading.value = false;
+  }
+}
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    /* brief visual feedback */
+  }).catch(() => {});
+}
+
 </script>
 
 <style scoped>
@@ -1304,8 +1606,34 @@ onMounted(() => {
 .stat-num { display: block; font-size: 28px; font-weight: 300; letter-spacing: 2px; margin-bottom: 4px; }
 .stat-label { font-size: 12px; opacity: 0.5; letter-spacing: 1px; }
 
-.list-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.list-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
 .list-toolbar h2 { font-size: 18px; font-weight: 500; margin: 0; }
+
+/* 手机端：更多下拉菜单 */
+.toolbar-actions { display: none; align-items: center; gap: 8px; position: relative; }
+.toolbar-desktop-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.btn-more {
+  display: flex; align-items: center; gap: 4px;
+  padding: 8px 14px; border-radius: 18px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg); color: var(--text);
+  cursor: pointer; font-size: 13px; letter-spacing: 1px;
+  white-space: nowrap;
+}
+.btn-more:hover { background: var(--glass-border); }
+
+.more-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 8px; border-radius: 12px;
+  background: var(--glass-bg); backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  z-index: 100; min-width: 140px;
+}
+.more-dropdown .btn-outline { width: 100%; text-align: center; }
+
 
 .admin-card {
   margin-bottom: 24px; padding: 24px;
@@ -1509,6 +1837,8 @@ onMounted(() => {
   .images-layout { flex-direction: column; }
   .images-sidebar { width: 100%; }
   .images-grid { grid-template-columns: repeat(2, 1fr); }
+  .toolbar-actions { display: flex; }
+  .toolbar-desktop-actions { display: none; }
 }
 
 /* 公告管理 */
@@ -1524,4 +1854,34 @@ onMounted(() => {
 .new-group-form { display: flex; gap: 6px; align-items: center; }
 .new-group-input { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--glass-border); background: transparent; color: var(--text); font-size: 12px; }
 .new-group-input:focus { outline: none; border-color: var(--secondary); }
+
+.filter-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.filter-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--glass-bg, rgba(255,255,255,0.06)); border: 1px solid var(--glass-border, rgba(255,255,255,0.12)); border-radius: 20px; padding: 4px 12px; font-size: 13px; color: var(--text-primary, #fff); }
+.tag-remove { background: none; border: none; color: var(--text-secondary, rgba(255,255,255,0.5)); cursor: pointer; font-size: 16px; line-height: 1; padding: 0; margin-left: 2px; }
+.tag-remove:hover { color: #ff6b6b; }
+
+/* 数据表格 (用户管理/下载记录) */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--glass-border); opacity: 0.6; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid var(--glass-border); vertical-align: middle; }
+.data-table tr:hover td { background: rgba(255,255,255,0.03); }
+.data-table small { font-size: 11px; opacity: 0.5; }
+
+/* 角色标签 */
+.role-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.role-badge.admin { background: rgba(192,57,43,0.2); color: #e74c3c; }
+.role-badge.user { background: rgba(255,255,255,0.08); color: var(--text); opacity: 0.7; }
+
+/* 筛选行 */
+.filter-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text); font-size: 12px; flex: 1; min-width: 160px; font-family: inherit; }
+.filter-input:focus { outline: none; border-color: var(--secondary); }
+.filter-input::placeholder { opacity: 0.4; }
+
+/* 新密码显示 */
+.new-pwd-display { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--glass-bg); border-radius: 10px; border: 1px solid var(--glass-border); font-size: 13px; }
+.new-pwd-display code { font-size: 15px; font-weight: bold; letter-spacing: 1px; color: var(--accent, #c6a76c); }
+
+/* 小号按钮变体 */
+.btn-outline.small { padding: 4px 12px; font-size: 12px; border-radius: 12px; }
 </style>

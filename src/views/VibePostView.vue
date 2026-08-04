@@ -1,3 +1,4 @@
+
 <template>
   <div class="module-page">
     <ModuleNav @openSearch="searchOpen = true" />
@@ -10,26 +11,71 @@
         <button class="btn-back" @click="router.push('/vibe')">← 返回</button>
         <div class="header-actions" v-if="isAdmin">
           <button class="btn-action" @click="editing = !editing">{{ editing ? '取消' : '编辑' }}</button>
-          <button class="btn-action danger" @click="confirmDelete">删除</button>
+          <button class="btn-action danger" @click="delConfirm = true">删除</button>
         </div>
       </div>
 
+      <!-- Edit mode -->
       <template v-if="editing">
         <input v-model="editForm.title" class="input-lg" placeholder="标题" />
-        <textarea v-model="editForm.content" class="textarea" placeholder="正文..." rows="8"></textarea>
+        <textarea v-model="editForm.content" class="textarea" placeholder="正文..." rows="6"></textarea>
+
+        <!-- Existing images management -->
+        <div v-if="editForm.images.length" class="edit-section">
+          <p class="section-label">现有例图 ({{ editForm.images.length }})</p>
+          <div class="edit-img-grid">
+            <div v-for="(img, i) in editForm.images" :key="'ei-'+i" class="edit-img-cell">
+              <img :src="img.url" class="edit-img" />
+              <button class="img-remove" @click="removeImage(i)">×</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Existing files management -->
+        <div v-if="editForm.files.length" class="edit-section">
+          <p class="section-label">现有文件 ({{ editForm.files.length }})</p>
+          <div v-for="(f, i) in editForm.files" :key="'ef-'+i" class="edit-file-row">
+            <span class="edit-file-name">📄 {{ f.name }}</span>
+            <button class="img-remove" @click="removeFile(i)">×</button>
+          </div>
+        </div>
+
+        <!-- Add new images -->
+        <div class="upload-section">
+          <label class="upload-label">
+            <span>{{ editForm.images.length ? '新增例图' : '添加例图' }}</span>
+            <input type="file" multiple accept="image/*" @change="onNewImages" class="file-input" />
+          </label>
+          <span class="upload-hint" v-if="newImages.length">{{ newImages.length }} 张待上传</span>
+        </div>
+
+        <!-- Add new files -->
+        <div class="upload-section">
+          <label class="upload-label">
+            <span>{{ editForm.files.length ? '新增文件' : '添加 Vibe 文件' }}</span>
+            <input type="file" multiple @change="onNewFiles" class="file-input" />
+          </label>
+          <span class="upload-hint" v-if="newFiles.length">{{ newFiles.length }} 个待上传</span>
+        </div>
+
+        <p v-if="uploadProgress" class="upload-status">{{ uploadProgress }}</p>
         <div class="form-actions">
+          <button v-if="editingId" class="btn-action danger" @click="delConfirm = true">删除帖子</button>
           <button class="btn-save" :disabled="saving" @click="saveEdit">{{ saving ? '保存中...' : '保存修改' }}</button>
         </div>
         <p v-if="editError" class="status-error">{{ editError }}</p>
       </template>
 
+      <!-- View mode -->
       <template v-else>
         <h1 class="detail-title">{{ post.title }}</h1>
         <time class="detail-date">{{ formatDate(post.created_at) }}</time>
         <div class="detail-content" v-if="post.content">{{ post.content }}</div>
 
         <div v-if="post.images && post.images.length" class="detail-images">
-          <img v-for="(img, i) in post.images" :key="i" :src="img" class="detail-img" loading="lazy" />
+          <img v-for="(img, i) in post.images" :key="i" :src="img"
+               class="detail-img" loading="lazy"
+               @click="viewImage(img)" />
         </div>
 
         <div v-if="post.files && post.files.length" class="detail-files">
@@ -48,12 +94,19 @@
       <div v-if="delConfirm" class="modal-overlay" @click.self="delConfirm = false">
         <div class="modal-card">
           <h3>确认删除</h3>
-          <p>确定要删除「{{ post.title }}」？</p>
+          <p>确定要删除「{{ post.title }}」？此操作不可撤销。</p>
           <div class="form-actions">
             <button class="btn-outline" @click="delConfirm = false">取消</button>
             <button class="btn-danger" :disabled="deleting" @click="doDelete">{{ deleting ? '删除中...' : '确认删除' }}</button>
           </div>
         </div>
+      </div>
+    </Teleport>
+
+    <!-- Image viewer -->
+    <Teleport to="body">
+      <div v-if="viewerSrc" class="img-viewer" @click="viewerSrc = ''">
+        <img :src="viewerSrc" />
       </div>
     </Teleport>
 
@@ -66,6 +119,7 @@ import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { apiFetch } from "../lib/api.js";
 import { useUser } from "../stores/user.js";
+import { compressToJpeg } from "../lib/upload.js";
 import ModuleNav from "../components/ModuleNav.vue";
 import SearchOverlay from "../components/SearchOverlay.vue";
 
@@ -79,12 +133,16 @@ const error = ref("");
 const searchOpen = ref(false);
 
 const editing = ref(false);
-const editForm = ref({ title: "", content: "" });
+const editForm = ref({ title: "", content: "", images: [], files: [] });
+const newImages = ref([]);
+const newFiles = ref([]);
 const saving = ref(false);
 const editError = ref("");
+const uploadProgress = ref("");
 
 const delConfirm = ref(false);
 const deleting = ref(false);
+const viewerSrc = ref("");
 
 function formatDate(iso) {
   if (!iso) return "";
@@ -93,10 +151,12 @@ function formatDate(iso) {
 
 function formatSize(bytes) {
   if (!bytes) return "";
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / 1048576).toFixed(1) + " MB";
+  if (bytes < 1024) return bytes + "B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + "KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + "MB";
 }
+
+function viewImage(src) { viewerSrc.value = src; }
 
 async function fetchPost() {
   loading.value = true;
@@ -111,8 +171,121 @@ async function fetchPost() {
   }
 }
 
-function confirmDelete() {
-  delConfirm.value = true;
+function removeImage(idx) {
+  editForm.value.images.splice(idx, 1);
+}
+
+function removeFile(idx) {
+  editForm.value.files.splice(idx, 1);
+}
+
+function onNewImages(e) {
+  newImages.value = Array.from(e.target.files || []);
+}
+
+function onNewFiles(e) {
+  newFiles.value = Array.from(e.target.files || []);
+}
+
+async function uploadPut(entries, blobs, contentTypes) {
+  const tasks = entries.map((entry, i) => {
+    if (!entry || !blobs[i]) return Promise.resolve();
+    return fetch(entry.url, {
+      method: "PUT",
+      body: blobs[i],
+      headers: { "Content-Type": contentTypes[i] || entry.content_type || "application/octet-stream" },
+      credentials: "omit",
+    });
+  });
+  await Promise.all(tasks);
+}
+
+async function saveEdit() {
+  if (!editForm.value.title.trim()) { editError.value = "标题不能为空"; return; }
+  saving.value = true;
+  editError.value = "";
+  uploadProgress.value = "";
+  const postId = route.params.id;
+
+  try {
+    // Save title/content
+    uploadProgress.value = "保存帖子...";
+    await apiFetch("/api/admin/vibe/" + postId, {
+      method: "PATCH",
+      body: JSON.stringify({ title: editForm.value.title, content: editForm.value.content }),
+      silent: true,
+    });
+
+    // Build updated images_json
+    let imagesMeta = [...editForm.value.images];
+
+    // Upload new images (JPEG compressed)
+    if (newImages.value.length > 0) {
+      uploadProgress.value = "压缩上传例图...";
+      const imgData = [];
+      for (const file of newImages.value) {
+        const result = await compressToJpeg(file);
+        if (result) imgData.push({ blob: result.blob, file_name: file.name, width: result.width, height: result.height });
+      }
+      if (imgData.length > 0) {
+        const signResp = await apiFetch("/api/admin/vibe/upload-sign", {
+          method: "POST",
+          body: JSON.stringify({
+            post_id: postId,
+            files: imgData.map(e => ({ file_name: e.file_name, content_type: "image/jpeg" })),
+          }),
+          silent: true,
+        });
+        const entries = signResp.entries || [];
+        await uploadPut(entries, imgData.map(d => d.blob), imgData.map(() => "image/jpeg"));
+        for (let i = 0; i < imgData.length; i++) {
+          imagesMeta.push({ r2_key: entries[i]?.key || "", file_name: imgData[i].file_name, width: imgData[i].width, height: imgData[i].height });
+        }
+      }
+    }
+
+    await apiFetch("/api/admin/vibe/" + postId, {
+      method: "PATCH",
+      body: JSON.stringify({ images_json: JSON.stringify(imagesMeta) }),
+      silent: true,
+    });
+
+    // Upload new files
+    let filesMeta = [...editForm.value.files];
+    if (newFiles.value.length > 0) {
+      uploadProgress.value = "上传文件...";
+      const fileArr = Array.from(newFiles.value);
+      const signResp = await apiFetch("/api/admin/vibe/upload-sign", {
+        method: "POST",
+        body: JSON.stringify({
+          post_id: postId,
+          files: fileArr.map(f => ({ file_name: f.name, content_type: f.type || "application/octet-stream" })),
+        }),
+        silent: true,
+      });
+      const entries = signResp.entries || [];
+      await uploadPut(entries, fileArr, fileArr.map(f => f.type || "application/octet-stream"));
+      for (let i = 0; i < fileArr.length; i++) {
+        filesMeta.push({ r2_key: entries[i]?.key || "", file_name: fileArr[i].name, file_size: fileArr[i].size });
+      }
+    }
+
+    await apiFetch("/api/admin/vibe/" + postId, {
+      method: "PATCH",
+      body: JSON.stringify({ files_json: JSON.stringify(filesMeta) }),
+      silent: true,
+    });
+
+    uploadProgress.value = "完成";
+    editing.value = false;
+    newImages.value = [];
+    newFiles.value = [];
+    await fetchPost();
+  } catch (e) {
+    editError.value = e.message || "保存失败";
+  } finally {
+    saving.value = false;
+  }
 }
 
 async function doDelete() {
@@ -128,45 +301,15 @@ async function doDelete() {
   }
 }
 
-async function saveEdit() {
-  saving.value = true;
-  editError.value = "";
-  try {
-    const data = await apiFetch("/api/admin/vibe/" + route.params.id, {
-      method: "PATCH",
-      body: JSON.stringify(editForm.value),
-    });
-    post.value.title = editForm.value.title;
-    post.value.content = editForm.value.content;
-    editing.value = false;
-  } catch (e) {
-    editError.value = e.message || "保存失败";
-  } finally {
-    saving.value = false;
-  }
-}
-
 onMounted(fetchPost);
 </script>
 
 <style scoped>
-.module-page {
-  padding-top: 0;
-  padding-bottom: 100px;
-}
+.module-page { padding-top: 0; padding-bottom: 100px; }
 
-.post-detail {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
+.post-detail { max-width: 800px; margin: 0 auto; padding: 0 24px; }
 
-.detail-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 32px;
-}
+.detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
 .header-actions { display: flex; gap: 10px; }
 
 .btn-back {
@@ -192,94 +335,57 @@ onMounted(fetchPost);
   margin-bottom: 32px;
 }
 
-.detail-images {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-  margin-bottom: 32px;
-}
-.detail-img {
-  width: 100%; border-radius: 10px; object-fit: cover;
-  border: 1px solid var(--glass-border);
-}
+.detail-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 32px; }
+.detail-img { width: 100%; border-radius: 10px; object-fit: cover; border: 1px solid var(--glass-border); cursor: pointer; }
+.detail-img:hover { opacity: 0.85; }
 
-.detail-files h3 {
-  font-size: 16px; font-weight: 500; margin-bottom: 16px; opacity: 0.8;
-}
-
-.file-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 16px; border-radius: 10px;
-  background: var(--glass-bg); border: 1px solid var(--glass-border);
-  margin-bottom: 8px;
-}
+.detail-files h3 { font-size: 16px; font-weight: 500; margin-bottom: 16px; opacity: 0.8; }
+.file-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; background: var(--glass-bg); border: 1px solid var(--glass-border); margin-bottom: 8px; }
 .file-name { flex: 1; font-size: 14px; }
 .file-size { font-size: 12px; opacity: 0.4; }
-.btn-dl {
-  width: 34px; height: 34px; border-radius: 50%;
-  border: 1px solid var(--glass-border); background: transparent;
-  color: var(--text); display: flex; align-items: center; justify-content: center;
-  text-decoration: none; font-size: 16px; cursor: pointer; transition: background 0.2s;
-}
+.btn-dl { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--glass-border); background: transparent; color: var(--text); display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 16px; cursor: pointer; transition: background 0.2s; }
 .btn-dl:hover { background: var(--glass-border); }
 
-.form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+.edit-section { margin-bottom: 16px; }
+.section-label { font-size: 12px; opacity: 0.5; margin-bottom: 8px; letter-spacing: 1px; }
+.edit-img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-bottom: 8px; }
+.edit-img-cell { position: relative; }
+.edit-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--glass-border); }
+.img-remove { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; border: none; background: rgba(192,57,43,0.8); color: #fff; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.edit-file-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.03); margin-bottom: 4px; }
+.edit-file-name { flex: 1; font-size: 13px; opacity: 0.7; }
 
-.btn-save {
-  padding: 10px 24px; border-radius: 20px; border: none;
-  background: rgba(255,255,255,0.12); color: var(--text);
-  cursor: pointer; font-size: 13px; letter-spacing: 1px;
-}
+.form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+.btn-save { padding: 10px 24px; border-radius: 20px; border: none; background: rgba(255,255,255,0.12); color: var(--text); cursor: pointer; font-size: 13px; letter-spacing: 1px; }
 .btn-save:hover { background: rgba(255,255,255,0.2); }
 .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.btn-outline {
-  padding: 10px 24px; border-radius: 20px;
-  border: 1px solid var(--glass-border); background: var(--glass-bg);
-  color: var(--text); cursor: pointer; font-size: 13px; letter-spacing: 1px;
-}
+.btn-outline { padding: 10px 24px; border-radius: 20px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text); cursor: pointer; font-size: 13px; letter-spacing: 1px; }
 .btn-outline:hover { background: var(--glass-border); }
-
-.btn-danger {
-  padding: 10px 24px; border-radius: 20px;
-  border: 1px solid #c0392b; background: #c0392b; color: #fff;
-  cursor: pointer; font-size: 13px; letter-spacing: 1px;
-}
+.btn-danger { padding: 10px 24px; border-radius: 20px; border: 1px solid #c0392b; background: #c0392b; color: #fff; cursor: pointer; font-size: 13px; letter-spacing: 1px; }
 .btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.input-lg {
-  width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
-  border-radius: 10px; padding: 12px 16px; color: var(--text);
-  font-size: 20px; outline: none; margin-bottom: 16px; font-family: inherit;
-}
+.input-lg { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 10px; padding: 12px 16px; color: var(--text); font-size: 20px; outline: none; margin-bottom: 16px; font-family: inherit; }
 .input-lg:focus { border-color: rgba(255,255,255,0.2); }
-
-.textarea {
-  width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
-  border-radius: 10px; padding: 12px 16px; color: var(--text);
-  font-size: 14px; outline: none; margin-bottom: 16px; font-family: inherit; resize: vertical;
-}
+.textarea { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 10px; padding: 12px 16px; color: var(--text); font-size: 14px; outline: none; margin-bottom: 16px; font-family: inherit; resize: vertical; }
 .textarea:focus { border-color: rgba(255,255,255,0.2); }
+
+.upload-section { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.upload-label { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 10px; border: 1px dashed var(--glass-border); cursor: pointer; font-size: 13px; opacity: 0.7; transition: opacity 0.2s, border-color 0.2s; }
+.upload-label:hover { opacity: 1; border-color: rgba(255,255,255,0.3); }
+.file-input { display: none; }
+.upload-hint { font-size: 12px; opacity: 0.4; }
+.upload-status { font-size: 12px; opacity: 0.6; margin-top: 8px; margin-bottom: 0; text-align: center; }
 
 .status { display: flex; justify-content: center; padding: 80px 24px; }
 .status-error { font-size: 14px; color: #c0392b; opacity: 0.7; }
-
-.skeleton-strip {
-  width: 280px; height: 16px; border-radius: 8px;
-  background: var(--glass-bg); animation: pulse 1.5s ease-in-out infinite;
-}
+.skeleton-strip { width: 280px; height: 16px; border-radius: 8px; background: var(--glass-bg); animation: pulse 1.5s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }
 
-.modal-overlay {
-  position: fixed; inset: 0; z-index: 1000;
-  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-  display: flex; align-items: center; justify-content: center;
-}
-.modal-card {
-  background: var(--glass-bg); backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border); border-radius: 16px;
-  padding: 32px; max-width: 420px; width: 90%;
-}
+.modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; }
+.modal-card { background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: 16px; padding: 32px; max-width: 420px; width: 90%; }
 .modal-card h3 { font-size: 20px; font-weight: 500; margin-bottom: 16px; }
 .modal-card p { font-size: 14px; opacity: 0.8; margin-bottom: 8px; }
+
+.img-viewer { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.img-viewer img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 4px; }
 </style>

@@ -10,7 +10,7 @@ export async function onRequestGet({ request, env }) {
 
   if (!q) return json({ results: [] });
 
-  if (type === "batch") {
+ if (type === "batch") {
     const rows = await env.DB.prepare(
       `SELECT b.batch_id, b.batch_name
        FROM batches b
@@ -27,6 +27,38 @@ export async function onRequestGet({ request, env }) {
       return { ...b, cover_url: coverUrl, type: "batch" };
     });
 
+    return json({ results });
+  }
+
+  if (type === "vibe") {
+    const rows = await env.DB.prepare(
+      `SELECT id, title, content FROM vibe_posts
+       WHERE (title LIKE ? OR content LIKE ?) AND is_active = 1
+       ORDER BY created_at DESC LIMIT 20`
+    )
+      .bind(`%${q}%`, `%${q}%`)
+      .all();
+    const results = (rows.results || []).map((p) => ({
+      id: p.id, title: p.title,
+      content_preview: (p.content || "").slice(0, 80),
+      type: "vibe",
+    }));
+    return json({ results });
+  }
+
+  if (type === "prompt_post") {
+    const rows = await env.DB.prepare(
+      `SELECT id, title, content FROM prompt_posts
+       WHERE (title LIKE ? OR content LIKE ?) AND is_active = 1
+       ORDER BY created_at DESC LIMIT 20`
+    )
+      .bind(`%${q}%`, `%${q}%`)
+      .all();
+    const results = (rows.results || []).map((p) => ({
+      id: p.id, title: p.title,
+      content_preview: (p.content || "").slice(0, 80),
+      type: "prompt_post",
+    }));
     return json({ results });
   }
 

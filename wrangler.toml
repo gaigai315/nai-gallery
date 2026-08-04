@@ -1,6 +1,9 @@
-name = "nai-private-gallery"
+﻿name = "nai-private-gallery"
 compatibility_date = "2026-07-22"
 pages_build_output_dir = "dist"
+
+## Secrets & R2 credentials are injected via:
+##   DISCORD_GUILD_ID, DISCORD_REQUIRED_ROLE_ID (optional — restrict login to guild members / specific role)
 
 ## Secrets & R2 credentials are injected via:
 ##   npx wrangler pages secret put <NAME> --project-name nai-private-gallery

@@ -1,4 +1,4 @@
-.env
+﻿.env
 .env.*
 !.env.example
 node_modules/
@@ -8,16 +8,13 @@ dist/
 *.local
 logs/
 
-# Private gallery data must stay outside Git.
+# Private gallery data — keep outside Git
 private/
 uploads/
 batch-*.sql
 private-*.sql
-*.png
-*.jpg
-*.jpeg
-*.webp
-*.txt
 
+# Allow project markdown and license
 !README.md
-!NAI画廊项目方案.md
+!*.md
+!LICENSE

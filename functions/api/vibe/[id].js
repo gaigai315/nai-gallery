@@ -42,6 +42,8 @@ export async function onRequestGet({ request, env, params }) {
 
   return json({
     id: row.id,
+    images_meta: images,
+    files_meta: files,
     title: row.title,
     content: row.content || "",
     images: imageUrls,

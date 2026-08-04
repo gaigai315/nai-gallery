@@ -20,17 +20,32 @@
                 @keydown.escape="close"
               />
             </div>
-            <div class="search-type-toggle">
-              <button :class="{ active: searchType === 'prompt' }" @click="searchType = 'prompt'">提示词</button>
-              <button :class="{ active: searchType === 'batch' }" @click="searchType = 'batch'">批次名</button>
-            </div>
+           <div class="search-type-toggle">
+             <button :class="{ active: searchType === 'prompt' }" @click="searchType = 'prompt'">画师串</button>
+             <button :class="{ active: searchType === 'batch' }" @click="searchType = 'batch'">批次名</button>
+             <button :class="{ active: searchType === 'vibe' }" @click="searchType = 'vibe'">Vibe</button>
+             <button :class="{ active: searchType === 'prompt_post' }" @click="searchType = 'prompt_post'">提示词帖</button>
+           </div>
           </div>
 
-          <div class="search-results" v-if="!loading && results.length > 0">
-            <template v-if="searchType === 'prompt'">
-              <div
-                v-for="item in results"
-                :key="item.image_id"
+         <div class="search-results" v-if="!loading && results.length > 0">
+           <template v-if="searchType === 'vibe' || searchType === 'prompt_post'">
+             <div
+               v-for="item in results"
+               :key="item.id"
+               class="result-card result-text-card"
+               @click="goToPost(item)"
+             >
+               <div class="result-meta">
+                 <div class="result-prompt">{{ item.title }}</div>
+                 <div class="result-batch">{{ item.content_preview }}</div>
+               </div>
+             </div>
+           </template>
+           <template v-else-if="searchType === 'prompt'">
+             <div
+               v-for="item in results"
+               :key="item.image_id"
                 class="result-card"
                 @click="goTo(item)"
               >
@@ -127,6 +142,12 @@ function goTo(item) {
 function goToBatch(item) {
   close();
   router.push(`/gallery/${item.batch_id}`);
+}
+
+function goToPost(item) {
+  close();
+  if (item.type === "vibe") router.push(`/vibe/${item.id}`);
+  else router.push(`/prompts/${item.id}`);
 }
 
 watch(searchType, () => {
@@ -294,6 +315,18 @@ watch(() => props.visible, (v) => {
 
 .result-batch-card .result-meta { padding: 10px; text-align: center; }
 .result-batch-card .result-prompt { font-size: 13px; }
+
+.result-text-card {
+  grid-column: span 4;
+}
+.result-text-card .result-meta { padding: 14px 16px; }
+.result-text-card .result-prompt { font-size: 14px; font-weight: 500; }
+.result-text-card .result-batch {
+  font-size: 12px;
+  opacity: 0.5;
+  margin-top: 6px;
+  line-height: 1.4;
+}
 
 .search-status {
   display: flex;

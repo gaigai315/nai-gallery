@@ -43,6 +43,31 @@ const mockAnnouncements = [
   { id: 2, title: "Changelog", content: "2026-07-23: Added search, announcements, pledge system.", image_url: null, is_active: 1, sort_order: 1, created_at: new Date(Date.now() - 86400000).toISOString() },
   { id: 3, title: "Draft", content: "Inactive announcement.", image_url: null, is_active: 0, sort_order: 2, created_at: new Date().toISOString() },
 ];
+
+const mockFeedbacks = [
+  { id: 1, discord_id: 'user-001', username: 'Alice', content: '图片加载有些慢，希望能优化一下。', images_json: '[]', created_at: new Date(Date.now() - 3600000).toISOString() },
+  { id: 2, discord_id: 'user-002', username: 'Bob', content: '手机端的导航有点小，可以大一些。', images_json: '[]', created_at: new Date(Date.now() - 7200000).toISOString() },
+  { id: 3, discord_id: 'user-003', username: '', content: '希望增加一个暗色模式。', images_json: '[]', created_at: new Date(Date.now() - 86400000).toISOString() },
+];
+
+
+const mockWishes = [
+  { id: 1, discord_id: 'user-001', username: 'Alice', avatar_url: '', content: '想要更多花园和自然风景的图集～', images_json: '[]', reply_count: 2, created_at: new Date().toISOString() },
+  { id: 2, discord_id: 'user-002', username: 'Bob', avatar_url: '', content: '能不能加一些古风类型的创作？', images_json: '[]', reply_count: 1, created_at: new Date(Date.now() - 86400000).toISOString() },
+  { id: 3, discord_id: 'user-003', username: 'Carol', avatar_url: '', content: '希望有个幻想系列的合集！', images_json: '[]', reply_count: 0, created_at: new Date(Date.now() - 172800000).toISOString() },
+];
+
+const mockWishReplies = {
+  1: [
+    { id: 101, discord_id: 'admin-001', username: '站长', avatar_url: '', content: '收到！花园集已经在准备了～', created_at: new Date().toISOString() },
+    { id: 102, discord_id: 'admin-001', username: '站长', avatar_url: '', content: '大概 10 张左右，以秘境风光为主。', created_at: new Date().toISOString() },
+  ],
+  2: [
+    { id: 201, discord_id: 'admin-001', username: '站长', avatar_url: '', content: '古风在计划中，下季度更新。', created_at: new Date().toISOString() },
+  ],
+};
+
+let mockFilterWords = [];
 let mockSiteConfig = { pledge_text: "No redistribution.\nNo commercial use.\nNo AI training with these images." };
 
 function readBody(req) {
@@ -206,6 +231,44 @@ function devApiPlugin() {
 
         if (url === "/admin/stats" && method === "GET") { res.end(JSON.stringify({ total_users: 3, total_unlocks: 5, total_downloads: 8 })); return; }
 
+        if (url === "/admin/users" && method === "GET") { res.end(JSON.stringify({ users: mockUsers })); return; }
+
+        if (url?.startsWith("/admin/users/") && method === "PATCH") {
+          const parts = url.split("/");
+          const discordId = parts[3];
+          readBody(req).then(function(body) {
+            const { role } = JSON.parse(body || "{}");
+            const u = mockUsers.find(function(x) { return x.discord_id === discordId; });
+            if (u) { u.role = role; u.updated_at = new Date().toISOString(); res.end(JSON.stringify({ ok: true })); }
+            else { res.statusCode = 404; res.end(JSON.stringify({ error: "not_found" })); }
+          });
+          return;
+        }
+
+        if (url === "/admin/downloads" && method === "GET") {
+          const qs = new URLSearchParams(req.url?.split("?")[1] || "");
+          const userFilter = qs.get("user") || "";
+          const batchFilter = qs.get("batch") || "";
+          const offset = parseInt(qs.get("offset") || "0");
+          const limit = parseInt(qs.get("limit") || "50");
+          let filtered = mockDownloadsData;
+          if (userFilter) filtered = filtered.filter(function(d) { return d.discord_id === userFilter; });
+          if (batchFilter) filtered = filtered.filter(function(d) { return d.batch_id === batchFilter; });
+          const sliced = filtered.slice(offset, offset + limit);
+          res.end(JSON.stringify({ downloads: sliced, total: filtered.length }));
+          return;
+        }
+
+        if (url?.startsWith("/admin/batches/") && url?.endsWith("/reset-password") && method === "POST") {
+          const parts = url.split("/");
+          const batchId = parts[3];
+          const chars = "abcdef0123456789";
+          let pwd = "";
+          for (let i = 0; i < 16; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+          res.end(JSON.stringify({ password: pwd }));
+          return;
+        }
+
         if (url === "/search" && method === "GET") {
           const qs = new URLSearchParams(req.url?.split("?")[1] || "");
           const q = (qs.get("q") || "").toLowerCase().trim();
@@ -267,6 +330,17 @@ function devApiPlugin() {
           return;
         }
 
+
+        // ---- admin feedbacks ----
+        if (url === "/admin/feedbacks" && method === "GET") {
+          const q = new URL(req.url, "http://localhost").searchParams;
+          const offset = Math.max(0, Number(q.get("offset") || 0));
+          const limit = Math.min(50, Math.max(1, Number(q.get("limit") || 20)));
+          const sliced = mockFeedbacks.slice(offset, offset + limit);
+          res.end(JSON.stringify({ feedbacks: sliced, total: mockFeedbacks.length, offset, limit }));
+          return;
+        }
+
         // ---- site-config ----
         if (url === "/site-config" && method === "GET") {
           res.end(JSON.stringify({ pledge_text: mockSiteConfig.pledge_text }));
@@ -285,22 +359,26 @@ function devApiPlugin() {
 
         
         // ---- vibe (public) ----
-        if (url === '/vibe' && method === 'GET') {
-          const posts = mockVibePosts.filter(p => p.is_active).map(p => {
-            let imgs = []; try { imgs = JSON.parse(p.images_json || '[]'); } catch {}
-            let files = []; try { files = JSON.parse(p.files_json || '[]'); } catch {}
-            return { id: p.id, title: p.title, content_preview: (p.content || '').slice(0, 80), image_count: imgs.length, file_count: files.length, first_image: imgs.length > 0 ? '/api/preview/' + imgs[0] : '', created_at: p.created_at };
-          });
-          res.end(JSON.stringify({ posts }));
-          return;
-        }
         if (url?.match(/^\/vibe\/\d+$/) && method === 'GET') {
           const id = Number(url.split('/')[2]);
           const p = mockVibePosts.find(x => x.id === id);
           if (!p) { res.statusCode = 404; res.end(JSON.stringify({ error: 'not_found' })); return; }
           let imgs = []; try { imgs = JSON.parse(p.images_json || '[]'); } catch {}
           let files = []; try { files = JSON.parse(p.files_json || '[]'); } catch {}
-          res.end(JSON.stringify({ id: p.id, title: p.title, content: p.content || '', images: imgs.map(k => '/api/preview/' + k), files: files.map(f => ({ name: f.file_name, size: f.file_size, url: '/api/download/vibe/' + p.id + '/' + f.r2_key })), created_at: p.created_at }));
+          res.end(JSON.stringify({ id: p.id, title: p.title, content: p.content || '', images: imgs.map(k => '/api/preview/' + k), images_meta: imgs, files: files.map(f => ({ name: f.file_name, size: f.file_size, url: '/api/download/vibe/' + p.id + '/' + f.r2_key })), files_meta: files, created_at: p.created_at }));
+          return;
+        }
+        if (url?.startsWith('/vibe') && !url.includes('/admin/vibe') && method === 'GET') {
+          const q = new URL(req.url, "http://localhost").searchParams;
+          const limit = Math.min(Number(q.get('limit') || 20), 100);
+          const offset = Number(q.get('offset') || 0);
+          const allPosts = mockVibePosts.filter(p => p.is_active).map(p => {
+            let imgs = []; try { imgs = JSON.parse(p.images_json || '[]'); } catch {}
+            let files = []; try { files = JSON.parse(p.files_json || '[]'); } catch {}
+            return { id: p.id, title: p.title, content_preview: (p.content || '').slice(0, 80), image_count: imgs.length, file_count: files.length, first_image: imgs.length > 0 ? '/api/preview/' + imgs[0] : '', created_at: p.created_at };
+          });
+          const sliced = allPosts.slice(offset, offset + limit);
+          res.end(JSON.stringify({ posts: sliced, total: allPosts.length, offset, limit }));
           return;
         }
 
@@ -351,22 +429,26 @@ function devApiPlugin() {
           return;
         }
 
-        // ---- prompts (public) ----
-        if (url === '/prompts' && method === 'GET') {
-          const posts = mockPromptPosts.filter(p => p.is_active).map(p => {
-            let imgs = []; try { imgs = JSON.parse(p.images_json || '[]'); } catch {}
-            return { id: p.id, title: p.title, content_preview: (p.content || '').slice(0, 80), image_count: imgs.length, first_image: imgs.length > 0 ? '/api/preview/' + imgs[0] : '', created_at: p.created_at };
-          });
-          res.end(JSON.stringify({ posts }));
-          return;
-        }
         if (url?.match(/^\/prompts\/\d+$/) && method === 'GET') {
           const id = Number(url.split('/')[2]);
           const p = mockPromptPosts.find(x => x.id === id);
           if (!p) { res.statusCode = 404; res.end(JSON.stringify({ error: 'not_found' })); return; }
           let imgs = []; try { imgs = JSON.parse(p.images_json || '[]'); } catch {}
           let params = null; try { params = JSON.parse(p.params_json || 'null'); } catch {}
-          res.end(JSON.stringify({ id: p.id, title: p.title, content: p.content, params, images: imgs.map(k => '/api/preview/' + k), created_at: p.created_at }));
+          res.end(JSON.stringify({ id: p.id, title: p.title, content: p.content, params, images: imgs.map(k => '/api/preview/' + k), images_meta: imgs, created_at: p.created_at }));
+          return;
+        }
+        // ---- prompts (public) ----
+        if (url?.startsWith('/prompts') && !url.includes('/admin/prompts') && method === 'GET') {
+          const q = new URL(req.url, "http://localhost").searchParams;
+          const limit = Math.min(Number(q.get('limit') || 20), 100);
+          const offset = Number(q.get('offset') || 0);
+          const allPosts = mockPromptPosts.filter(p => p.is_active).map(p => {
+            let imgs = []; try { imgs = JSON.parse(p.images_json || '[]'); } catch {}
+            return { id: p.id, title: p.title, content_preview: (p.content || '').slice(0, 80), image_count: imgs.length, first_image: imgs.length > 0 ? '/api/preview/' + imgs[0] : '', created_at: p.created_at };
+          });
+          const sliced = allPosts.slice(offset, offset + limit);
+          res.end(JSON.stringify({ posts: sliced, total: allPosts.length, offset, limit }));
           return;
         }
 
@@ -400,6 +482,102 @@ function devApiPlugin() {
           res.end(JSON.stringify({ ok: true }));
           return;
         }
+
+        // ---- wishes (public) ----
+        if (url === '/wishes' && method === 'GET') {
+          const q = new URL(req.url, 'http://localhost').searchParams;
+          const offset = Math.max(0, Number(q.get('offset') || 0));
+          const limit = Math.min(50, Math.max(1, Number(q.get('limit') || 20)));
+          const all = mockWishes.map(w => {
+            let imgs = []; try { imgs = JSON.parse(w.images_json || '[]'); } catch {}
+            return { ...w, images: imgs, image_count: imgs.length };
+          });
+          const sliced = all.slice(offset, offset + limit);
+          res.end(JSON.stringify({ wishes: sliced, total: all.length, offset, limit }));
+          return;
+        }
+
+        if (url && url.match(/^\/wishes\/\d+$/) && method === 'GET') {
+          const id = Number(url.split('/')[2]);
+          const w = mockWishes.find(x => x.id === id);
+          if (!w) { res.statusCode = 404; res.end(JSON.stringify({ error: 'not_found' })); return; }
+          let imgs = []; try { imgs = JSON.parse(w.images_json || '[]'); } catch {}
+          const imageUrls = imgs.map(i => '/api/preview/' + (i.r2_key || i));
+          const replies = mockWishReplies[id] || [];
+          res.end(JSON.stringify({ id: w.id, discord_id: w.discord_id, username: w.username, avatar_url: w.avatar_url, content: w.content, images: imageUrls, created_at: w.created_at, replies }));
+          return;
+        }
+
+        if (url === '/wishes' && method === 'POST') {
+          const body = await readBody(req);
+          const id = Date.now();
+          mockWishes.unshift({ id, discord_id: 'user-001', username: 'You', avatar_url: '', content: body.content || '', images_json: '[]', reply_count: 0, created_at: new Date().toISOString() });
+          res.end(JSON.stringify({ ok: true, id }));
+          return;
+        }
+
+        if (url && url.match(/^\/wishes\/\d+$/) && method === 'PATCH') {
+          const id = Number(url.split('/')[2]);
+          const body = await readBody(req);
+          const w = mockWishes.find(x => x.id === id);
+          if (!w) { res.statusCode = 404; res.end(JSON.stringify({ error: 'not_found' })); return; }
+          if (body.images_json !== undefined) w.images_json = body.images_json;
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+
+        if (url === '/wishes/upload-sign' && method === 'POST') {
+          const body = await readBody(req);
+          const files = Array.isArray(body.files) ? body.files : [];
+          const entries = files.map((f, i) => ({ key: 'wishes/' + Date.now() + '_' + i, url: 'https://dev-r2-placeholder.local/wishes/' + Date.now() + '_' + i, file_name: f.file_name, content_type: f.content_type || 'image/jpeg' }));
+          res.end(JSON.stringify({ entries }));
+          return;
+        }
+
+        // ---- admin wishes ----
+        if (url && url.match(/^\/admin\/wishes\/\d+\/reply$/) && method === 'POST') {
+          const wishId = Number(url.split('/')[3]);
+          const body = await readBody(req);
+          const reply = { id: Date.now(), discord_id: 'admin-001', username: '站长', avatar_url: '', content: body.content || '', created_at: new Date().toISOString() };
+          if (!mockWishReplies[wishId]) mockWishReplies[wishId] = [];
+          mockWishReplies[wishId].push(reply);
+          const w = mockWishes.find(x => x.id === wishId);
+          if (w) w.reply_count = (w.reply_count || 0) + 1;
+          res.end(JSON.stringify({ ok: true, id: reply.id, username: reply.username, avatar_url: reply.avatar_url, created_at: reply.created_at }));
+          return;
+        }
+
+        if (url && url.match(/^\/admin\/wishes\/\d+$/) && method === 'DELETE') {
+          const id = Number(url.split('/')[3]);
+          const idx = mockWishes.findIndex(x => x.id === id);
+          if (idx === -1) { res.statusCode = 404; res.end(JSON.stringify({ error: 'not_found' })); return; }
+          mockWishes.splice(idx, 1);
+          delete mockWishReplies[id];
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+
+        // ---- feedbacks (public submit) ----
+        if (url === '/feedbacks' && method === 'POST') {
+          const body = await readBody(req);
+          const id = Date.now();
+          mockFeedbacks.push({ id, discord_id: 'user-001', username: 'You', content: body.content || '', images_json: body.images_json || '[]', created_at: new Date().toISOString() });
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+
+        // ---- admin filter-words ----
+        if (url === '/admin/filter-words' && method === 'GET') {
+          res.end(JSON.stringify({ words: mockFilterWords }));
+          return;
+        }
+        if (url === '/admin/filter-words' && method === 'POST') {
+          const body = await readBody(req);
+          mockFilterWords = Array.isArray(body.words) ? body.words : [];
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+
 
 // ---- fallback ----
         res.statusCode = 503;

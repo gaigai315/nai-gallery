@@ -64,29 +64,32 @@ const routes = [
   {
     path: '/other/wish',
     name: 'Wish',
-    component: () => import('./views/PlaceholderView.vue'),
+    component: () => import('./views/WishView.vue'),
     meta: { requiresAuth: true },
-    props: { title: '许愿墙', icon: '\u2605' },
   },
   {
     path: '/other/feedback',
     name: 'Feedback',
-    component: () => import('./views/PlaceholderView.vue'),
+    component: () => import('./views/FeedbackView.vue'),
     meta: { requiresAuth: true },
-    props: { title: '反馈', icon: '\u270E' },
   },
   {
     path: '/other/about',
     name: 'About',
-    component: () => import('./views/PlaceholderView.vue'),
+    component: () => import('./views/AboutView.vue'),
     meta: { requiresAuth: true },
-    props: { title: '关于作者', icon: '\u273E' },
   },
   {
     path: '/admin',
     name: 'Admin',
     component: () => import('./views/AdminView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('./views/NotFoundView.vue'),
+    meta: { requiresAuth: false },
   },
 ];
 

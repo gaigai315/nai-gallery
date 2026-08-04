@@ -1,12 +1,20 @@
-import { json, requireSession } from "../_lib/session.js";
+﻿import { json, requireSession } from "../_lib/session.js";
 
 export async function onRequestGet({ request, env }) {
   const auth = await requireSession(request, env);
   if (auth.response) return auth.response;
 
+  const url = new URL(request.url);
+  const limit = Math.min(Number(url.searchParams.get("limit") || 20), 100);
+  const offset = Number(url.searchParams.get("offset") || 0);
+
+  const countRow = await env.DB.prepare(
+    "SELECT COUNT(*) AS count FROM vibe_posts WHERE is_active = 1"
+  ).first();
+
   const rows = await env.DB.prepare(
-    "SELECT id, title, content, images_json, files_json, created_at FROM vibe_posts WHERE is_active = 1 ORDER BY created_at DESC"
-  ).all();
+    "SELECT id, title, content, images_json, files_json, created_at FROM vibe_posts WHERE is_active = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?"
+  ).bind(limit, offset).all();
 
   const posts = (rows.results || []).map((p) => {
     let images = [];
@@ -24,5 +32,5 @@ export async function onRequestGet({ request, env }) {
     };
   });
 
-  return json({ posts });
+  return json({ posts, total: countRow?.count || 0, offset, limit });
 }

@@ -70,7 +70,7 @@ defineEmits(["unlock", "delete"]);
   border: 1px solid rgba(192,57,43,0.4);
   background: rgba(0,0,0,0.5);
   backdrop-filter: blur(4px);
-  opacity: 0;
+  opacity: 0.7;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -81,9 +81,6 @@ defineEmits(["unlock", "delete"]);
 }
 .card-delete-btn:hover {
   background: rgba(192,57,43,0.4);
-}
-.waterfall-card:hover .card-delete-btn {
-  opacity: 1;
 }
 
 @media (max-width: 1024px) {

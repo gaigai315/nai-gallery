@@ -25,6 +25,10 @@
       </div>
     </div>
 
+    <div ref="sentinelRef" v-if="hasMore" class="loading-sentinel">
+      <div class="skeleton-strip"></div>
+    </div>
+
     <div v-if="isAdmin && editMode && selected.length" class="batch-bar">
       <button class="btn-outline" @click="deleteSelected">删除选中 ({{ selected.length }})</button>
     </div>
@@ -65,7 +69,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { apiFetch } from "../lib/api.js";
 import { useUser } from "../stores/user.js";
@@ -77,8 +81,12 @@ const router = useRouter();
 const { isAdmin } = useUser();
 
 const posts = ref([]);
+const postsTotal = ref(0);
 const loading = ref(true);
+const loadingMore = ref(false);
+const hasMore = ref(false);
 const error = ref("");
+const sentinelRef = ref(null);
 const searchOpen = ref(false);
 
 const selected = ref([]);
@@ -101,12 +109,29 @@ async function fetchPosts() {
   loading.value = true;
   error.value = "";
   try {
-    const data = await apiFetch("/api/vibe");
+    const data = await apiFetch("/api/vibe?limit=20&offset=0");
     posts.value = data.posts || [];
+    postsTotal.value = data.total || 0;
+    hasMore.value = posts.value.length < postsTotal.value;
   } catch (e) {
-    error.value = e.message || "加载失败";
+    error.value = e.message || "????";
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadMore() {
+  if (loadingMore.value || posts.value.length >= postsTotal.value) return;
+  loadingMore.value = true;
+  try {
+    const data = await apiFetch("/api/vibe?limit=20&offset=" + posts.value.length);
+    posts.value.push(...(data.posts || []));
+    postsTotal.value = data.total || postsTotal.value;
+    hasMore.value = posts.value.length < postsTotal.value;
+  } catch (e) {
+    // silently fail on load more
+  } finally {
+    loadingMore.value = false;
   }
 }
 
@@ -270,7 +295,19 @@ async function save() {
   }
 }
 
-onMounted(fetchPosts);
+let observer = null;
+onMounted(() => {
+  fetchPosts();
+  nextTick(() => {
+    if (sentinelRef.value) {
+      observer = new IntersectionObserver((entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      }, { rootMargin: "200px" });
+      observer.observe(sentinelRef.value);
+    }
+  });
+});
+onBeforeUnmount(() => { if (observer) observer.disconnect(); });
 </script>
 
 <style scoped>
@@ -436,6 +473,7 @@ onMounted(fetchPosts);
 .status { display: flex; justify-content: center; padding: 80px 24px; }
 .status-error { font-size: 14px; color: #c0392b; opacity: 0.7; }
 .status-empty { font-size: 14px; opacity: 0.4; letter-spacing: 2px; }
+.loading-sentinel { display: flex; justify-content: center; padding: 32px 0; }
 
 .skeleton-strip {
   width: 280px;

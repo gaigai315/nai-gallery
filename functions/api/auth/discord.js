@@ -1,4 +1,4 @@
-import { base64UrlEncode, hmacSha256 } from "../../_lib/crypto.js";
+﻿import { base64UrlEncode, hmacSha256 } from "../../_lib/crypto.js";
 
 export async function onRequestGet({ env }) {
   const redirectUri = env.DISCORD_REDIRECT_URI;
@@ -10,7 +10,7 @@ export async function onRequestGet({ env }) {
     client_id: env.DISCORD_CLIENT_ID,
     redirect_uri: redirectUri,
     response_type: "code",
-    scope: "identify",
+    scope: "identify guilds guilds.members.read",
     state,
     prompt: "none",
   });

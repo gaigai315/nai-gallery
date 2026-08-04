@@ -1,12 +1,9 @@
 ﻿<template>
   <div id="bookshelf-view" class="view-container active">
-        <ModuleNav
+    <ModuleNav
       v-if="!loading && !error"
       :isTarot="isTarot"
-      :showEditBtn="isAdmin"
-      :editMode="editMode"
       @toggleView="isTarot = !isTarot"
-      @toggleEdit="editMode = !editMode"
       @openSearch="searchOpen = true"
     />
 
@@ -29,7 +26,6 @@
         v-if="isTarot"
         :cards="batchCards"
         :isAdmin="isAdmin"
-        :editMode="editMode"
         @unlock="openSeal"
         @delete="confirmDelete"
       />
@@ -37,7 +33,6 @@
         v-else
         :cards="batchCards"
         :isAdmin="isAdmin"
-        :editMode="editMode"
         @unlock="openSeal"
         @delete="confirmDelete"
       />
@@ -94,7 +89,6 @@ const router = useRouter();
 const { isAdmin } = useUser();
 
 const isTarot = ref(localStorage.getItem('gallery_view') !== 'grid');
-const editMode = ref(false);
 const sealVisible = ref(false);
 const selectedBatch = ref(null);
 const batchCards = ref([]);
@@ -234,7 +228,7 @@ onUnmounted(() => {
 
 <style scoped>
 #bookshelf-view {
-  padding-top: 80px;
+  padding-top: 0;
   padding-bottom: 100px;
 }
 

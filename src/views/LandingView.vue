@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <main class="landing-shell">
     <div v-if="showPledge" class="landing-hero">
       <h1 class="landing-title">The Glasshouse</h1>
@@ -53,16 +53,18 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useUser } from "../stores/user.js";
 
 const router = useRouter();
+const route = useRoute();
 const { mockLogin } = useUser();
 
 const showPledge = ref(false);
 const pledgeText = ref("");
 const pledgeInput = ref("");
 const pledgeError = ref("");
+const authError = ref("");
 
 function devLogin() {
   mockLogin("admin");
@@ -82,6 +84,16 @@ function tryLogin(e) {
 }
 
 onMounted(async () => {
+  // Check auth error from query params
+  const authParam = route.query.auth;
+  if (authParam === 'not_in_guild') {
+    authError.value = '你不在该服务器中，请先加入 Discord 服务器。';
+  } else if (authParam === 'role_denied') {
+    authError.value = '你没有访问权限，请联系管理员获取对应身份组。';
+  } else if (authParam === 'failed') {
+    authError.value = '登录失败，请重试。';
+  }
+
   const passed = localStorage.getItem("pledge_passed");
   const savedHash = localStorage.getItem("pledge_text_hash");
 
@@ -241,5 +253,14 @@ onMounted(async () => {
   font-size: 12px;
   color: #c0392b;
   margin-bottom: 16px;
+}
+.auth-error {
+  font-size: 13px;
+  color: #e67e22;
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: rgba(230, 126, 34, 0.1);
+  border: 1px solid rgba(230, 126, 34, 0.3);
 }
 </style>

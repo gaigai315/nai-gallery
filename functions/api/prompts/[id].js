@@ -32,6 +32,7 @@ export async function onRequestGet({ request, env, params }) {
 
   return json({
     id: row.id,
+    images_meta: images,
     title: row.title,
     content: row.content,
     params: params,

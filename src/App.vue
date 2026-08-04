@@ -1,7 +1,11 @@
 <template>
   <div class="app-shell">
     <GlassNav v-if="isLoggedIn" />
-    <router-view />
+    <router-view v-slot="{ Component, route }">
+      <Transition :name="route.meta.transition || 'page-fade'" mode="out-in">
+        <component :is="Component" :key="route.path" />
+      </Transition>
+    </router-view>
     <Toast />
   </div>
 </template>
@@ -51,3 +55,14 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style>
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+}
+</style>

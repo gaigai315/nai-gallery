@@ -1,0 +1,5 @@
+﻿CREATE TABLE IF NOT EXISTS filter_words (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  word TEXT NOT NULL UNIQUE,
+  created_at TEXT DEFAULT (datetime('now'))
+);
