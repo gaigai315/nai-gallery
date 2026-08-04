@@ -71,3 +71,6 @@ npx wrangler d1 execute nai-gallery --remote --command="UPDATE users SET role='a
 ```
 
 In dev (`npm run dev`), click "Dev Mode" on the landing page to mock-login as admin directly.
+
+## Privacy
+See [PRIVACY.md](PRIVACY.md) for data collection and usage details.
