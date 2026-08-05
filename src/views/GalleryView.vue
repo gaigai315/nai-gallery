@@ -143,7 +143,7 @@ async function fetchBatches() {
 
 function openSeal(batch) {
   if (isAdmin.value || batch?.unlocked_at) {
-    router.push('/gallery/' + batch.batch_id);
+    router.push('/gallery/' + encodeURIComponent(batch.batch_id));
   } else {
     selectedBatch.value = batch;
     sealVisible.value = true;
@@ -162,7 +162,7 @@ function handleUnlocked(batch) {
     };
   }
   if (batch?.batch_id) {
-    router.push('/gallery/' + batch.batch_id);
+    router.push('/gallery/' + encodeURIComponent(batch.batch_id));
   }
 }
 
@@ -176,7 +176,7 @@ async function doDelete() {
   deleting.value = true;
   deleteError.value = "";
   try {
-    await apiFetch("/api/admin/batches/" + deleteTarget.value.batch_id, { method: "DELETE" });
+    await apiFetch("/api/admin/batches/" + encodeURIComponent(deleteTarget.value.batch_id), { method: "DELETE" });
     batchCards.value = batchCards.value.filter((b) => b.batch_id !== deleteTarget.value.batch_id);
     deleteTarget.value = null;
   } catch (e) {

@@ -597,7 +597,7 @@
 
           <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
             <button class="btn-outline" @click="settingsCoverId = null" v-if="settingsCoverId">清除封面（使用默认）</button>
-            <button class="btn-outline" @click="resetBatchPassword(settingsTarget.batch_id)" :disabled="resetPwdLoading">{{ resetPwdLoading ? '生成中...' : '重置密码' }}</button>
+            <button class="btn-outline" @click="resetBatchPassword(settingsTarget.batch_id)" :disabled="resetPwdLoading">{{ resetPwdLoading ? '处理中...' : '设置/重置密码' }}</button>
             <button class="btn-outline" @click="closeSettings">取消</button>
             <button class="btn-primary" :disabled="settingsSaving" @click="saveSettings">{{ settingsSaving ? '保存中...' : '保存设置' }}</button>
           </div>
@@ -1577,11 +1577,20 @@ function debounceFetchDownloads() {
 
 // ---- 重置密码 ----
 async function resetBatchPassword(batchId) {
-  if (!confirm('确定要重置该批次的密码吗？旧密码将立即失效。')) return;
+  const customPassword = window.prompt('请输入新密码（留空则自动生成随机密码）：');
+  if (customPassword === null) return;
+  if (customPassword.trim().length > 128) {
+    settingsError.value = '密码不能超过 128 个字符';
+    return;
+  }
+  if (!confirm('确定要设置新密码吗？旧密码将立即失效。')) return;
   resetPwdLoading.value = true;
   newPassword.value = '';
   try {
-    const data = await apiFetch('/api/admin/batches/' + batchId + '/reset-password', { method: 'POST' });
+    const data = await apiFetch('/api/admin/batches/' + encodeURIComponent(batchId) + '/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ password: customPassword.trim() }),
+    });
     newPassword.value = data.password;
   } catch (e) {
     /* toast handled by apiFetch */

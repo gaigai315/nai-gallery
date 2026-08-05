@@ -4,7 +4,7 @@ export async function onRequestGet({ request, env, params }) {
   const auth = await requireAdmin(request, env);
   if (auth.response) return auth.response;
 
-  const batchId = params.batch_id;
+  const batchId = decodeURIComponent(params.batch_id);
   const url = new URL(request.url);
   const groupId = url.searchParams.get("group_id") || "";
   const limit = Math.min(Number(url.searchParams.get("limit") || 50), 200);

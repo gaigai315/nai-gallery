@@ -32,6 +32,11 @@ export function clearSessionCookie(env) {
   return `${cookieName(env)}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 }
 
+export function decodePathParam(value) {
+  const raw = String(value || "");
+  try { return decodeURIComponent(raw); } catch { return raw; }
+}
+
 export async function getSession(request, env) {
   const raw = parseCookies(request)[cookieName(env)];
   if (!raw || !raw.includes(".")) return null;

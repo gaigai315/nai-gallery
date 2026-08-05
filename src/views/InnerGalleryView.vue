@@ -115,7 +115,7 @@ async function fetchGallery(opts = {}) {
 
   try {
     const data = await apiFetch(
-      `/api/gallery/${route.params.batchId}?limit=${limit}&offset=${offset}`
+      `/api/gallery/${encodeURIComponent(route.params.batchId)}?limit=${limit}&offset=${offset}`
     );
     batchName.value = data.batch?.batch_name || "";
     batchNotes.value = data.batch?.notes || "";

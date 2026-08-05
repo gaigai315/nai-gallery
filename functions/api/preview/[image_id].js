@@ -1,12 +1,12 @@
 import { hasUnlock, isAdmin } from "../../_lib/db.js";
 import { createR2SignedGetUrl } from "../../_lib/r2-sign.js";
-import { json, requireSession } from "../../_lib/session.js";
+import { decodePathParam, json, requireSession } from "../../_lib/session.js";
 
 export async function onRequestGet({ request, env, params }) {
   const auth = await requireSession(request, env);
   if (auth.response) return auth.response;
   const url = new URL(request.url);
-  const batchId = url.searchParams.get("batch_id");
+  const batchId = decodePathParam(url.searchParams.get("batch_id"));
   const admin = await isAdmin(env, auth.session.discord_id);
   if (!batchId || (!admin && !(await hasUnlock(env, auth.session.discord_id, batchId)))) return json({ error: "not_unlocked" }, 403);
 

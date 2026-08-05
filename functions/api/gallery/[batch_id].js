@@ -1,11 +1,12 @@
 ﻿import { hasUnlock, isAdmin } from "../../_lib/db.js";
-import { json, requireSession } from "../../_lib/session.js";
+import { decodePathParam, json, requireSession } from "../../_lib/session.js";
 
 export async function onRequestGet({ request, env, params }) {
   const auth = await requireSession(request, env);
+  const batchId = decodePathParam(params.batch_id);
   if (auth.response) return auth.response;
   const admin = await isAdmin(env, auth.session.discord_id);
-  if (!admin && !(await hasUnlock(env, auth.session.discord_id, params.batch_id))) return json({ error: "not_unlocked" }, 403);
+  if (!admin && !(await hasUnlock(env, auth.session.discord_id, batchId))) return json({ error: "not_unlocked" }, 403);
 
   const url = new URL(request.url);
   const limit = Math.min(Number(url.searchParams.get("limit") || 50), 200);
@@ -14,7 +15,7 @@ export async function onRequestGet({ request, env, params }) {
   let batchSql = "SELECT batch_id, batch_name, created_at, notes FROM batches WHERE batch_id = ?";
   if (!admin) batchSql += " AND is_active = 1";
   const batch = await env.DB.prepare(batchSql)
-    .bind(params.batch_id)
+    .bind(batchId)
     .first();
   if (!batch) return json({ error: "not_found" }, 404);
 
@@ -24,12 +25,12 @@ export async function onRequestGet({ request, env, params }) {
 
   const totalRow = await env.DB.prepare(
     `SELECT COUNT(*) AS count FROM images WHERE batch_id = ? AND ${activeClause}`
-  ).bind(params.batch_id).first();
+  ).bind(batchId).first();
 
   const groups = await env.DB.prepare(
     "SELECT group_id, title, notes, positive_prompt, negative_prompt, params_json FROM prompt_groups WHERE batch_id = ?",
   )
-    .bind(params.batch_id)
+    .bind(batchId)
     .all();
 
   const rows = await env.DB.prepare(
@@ -44,12 +45,12 @@ export async function onRequestGet({ request, env, params }) {
      ORDER BY i.created_at ASC, i.image_id ASC
      LIMIT ? OFFSET ?`,
   )
-    .bind(auth.session.discord_id, params.batch_id, limit, offset)
+    .bind(auth.session.discord_id, batchId, limit, offset)
     .all();
 
   const images = (rows.results || []).map((image) => ({
     ...image,
-    preview_url: `/api/preview/${encodeURIComponent(image.image_id)}?batch_id=${encodeURIComponent(params.batch_id)}`,
+    preview_url: `/api/preview/${encodeURIComponent(image.image_id)}?batch_id=${encodeURIComponent(batchId)}`,
   }));
   return json({
     batch,
