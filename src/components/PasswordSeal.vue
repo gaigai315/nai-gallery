@@ -32,6 +32,7 @@
 
 <script setup>
 import { ref, watch, nextTick } from "vue";
+import { apiFetch } from "../lib/api.js";
 
 const props = defineProps({
   visible: Boolean,
@@ -69,20 +70,18 @@ async function submitPassword() {
       return;
     }
 
-    const res = await fetch("/api/verify", {
+    const data = await apiFetch("/api/verify", {
       method: "POST",
-credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      silent: true,
       body: JSON.stringify({ password: password.value, batch_id: props.batchId }),
     });
-    const data = await res.json();
-    if (!res.ok) {
+    if (data.error) {
       error.value = data.error === "invalid_password" ? "Password is invalid or expired." : data.error || "Verification failed";
       return;
     }
     emit("unlocked", data.batch);
-  } catch {
-    error.value = "Network error. Please try again.";
+  } catch (e) {
+    error.value = e?.message || "Network error. Please try again.";
   } finally {
     loading.value = false;
   }
@@ -219,3 +218,15 @@ credentials: "include",
   color: #A85A5A;
 }
 </style>
+    const data = await apiFetch("/api/verify", {
+      method: "POST",
+      silent: true,
+      body: JSON.stringify({ password: password.value, batch_id: props.batchId }),
+    });
+    if (data.error) {
+      error.value = data.error === "invalid_password" ? "Password is invalid or expired." : data.error || "Verification failed";
+      return;
+    }
+    emit("unlocked", data.batch);
+  } catch (e) {
+    error.value = e?.message || "Network error. Please try again.";
