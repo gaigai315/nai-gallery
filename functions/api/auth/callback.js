@@ -51,16 +51,17 @@ export async function onRequestGet({ request, env }) {
 
   const user = await userResponse.json();
 
-  // Discord guild + role verification (optional — skips if DISCORD_GUILD_ID not set)
-  // Supports comma-separated guild IDs: in any one of them passes
+  // Discord guild + role verification (optional — skips if no guild setting exists).
+  // DISCORD_GUILD_ROLE_PAIRS accepts comma-separated guild:role pairs.
+  // The older DISCORD_GUILD_ID + DISCORD_REQUIRED_ROLE_ID settings remain supported.
   if (env.DISCORD_GUILD_ID) {
     const guildIds = env.DISCORD_GUILD_ID.split(',').map(s => s.trim()).filter(Boolean);
     let inGuild = false;
     let memberRoles = [];
     for (const gid of guildIds) {
-      const memberUrl = https://discord.com/api/users/@me/guilds//member;
+      const memberUrl = `https://discord.com/api/users/@me/guilds/${gid}/member`;
       const memberResp = await fetch(memberUrl, {
-        headers: { Authorization: Bearer  },
+        headers: { Authorization: `Bearer ${token.access_token}` },
       });
       if (memberResp.ok) {
         inGuild = true;
@@ -72,10 +73,32 @@ export async function onRequestGet({ request, env }) {
       }
     }
     if (!inGuild) {
-      return Response.redirect(${env.PUBLIC_BASE_URL || url.origin}/?auth=not_in_guild, 302);
+      return Response.redirect(`${env.PUBLIC_BASE_URL || url.origin}/?auth=not_in_guild`, 302);
     }
     if (env.DISCORD_REQUIRED_ROLE_ID && !memberRoles.includes(env.DISCORD_REQUIRED_ROLE_ID)) {
-      return Response.redirect(${env.PUBLIC_BASE_URL || url.origin}/?auth=role_denied, 302);
+      return Response.redirect(`${env.PUBLIC_BASE_URL || url.origin}/?auth=role_denied`, 302);
+    }
+  }
+
+  if (env.DISCORD_GUILD_ROLE_PAIRS) {
+    const pairs = env.DISCORD_GUILD_ROLE_PAIRS.split(',')
+      .map(pair => pair.trim().split(':').map(value => value.trim()))
+      .filter(([guildId, roleId]) => guildId && roleId);
+    let allowed = false;
+    for (const [guildId, roleId] of pairs) {
+      const memberResp = await fetch(`https://discord.com/api/users/@me/guilds/${guildId}/member`, {
+        headers: { Authorization: `Bearer ${token.access_token}` },
+      });
+      if (memberResp.ok) {
+        const member = await memberResp.json();
+        if ((member.roles || []).includes(roleId)) {
+          allowed = true;
+          break;
+        }
+      }
+    }
+    if (!allowed) {
+      return Response.redirect(`${env.PUBLIC_BASE_URL || url.origin}/?auth=role_denied`, 302);
     }
   }
 

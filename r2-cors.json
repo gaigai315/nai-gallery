@@ -6,7 +6,7 @@
           "http://localhost:5173",
           "http://localhost:8788",
           "https://nai-gallery.pages.dev",
-          "https://your-production-domain.pages.dev"
+          "https://nai-private-gallery-whi.pages.dev"
         ],
         "methods": ["PUT", "GET", "HEAD"],
         "role": "Writer",

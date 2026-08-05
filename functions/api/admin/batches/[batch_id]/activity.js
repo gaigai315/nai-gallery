@@ -1,4 +1,4 @@
-import { json, requireAdmin } from "../../../_lib/session.js";
+import { json, requireAdmin } from "../../../../_lib/session.js";
 
 export async function onRequestGet({ request, env, params }) {
   const auth = await requireAdmin(request, env);

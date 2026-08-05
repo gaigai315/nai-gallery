@@ -47,11 +47,12 @@ export async function apiFetch(url, options = {}) {
 
   if (!res.ok) {
     const code = data?.error || `http_${res.status}`;
+    const detail = data?.detail ? `: ${data.detail}` : "";
     if (!silent) {
       const [msg, type] = ERROR_MESSAGES[code] || [data?.error || `请求失败 (${res.status})`, "error"];
       addToast(msg, type);
     }
-    throw new ApiError(data?.error || `Request failed (${res.status})`, code, res.status);
+    throw new ApiError(data?.error ? `${data.error}${detail}` : `Request failed (${res.status})`, code, res.status);
   }
 
   return data;

@@ -19,7 +19,7 @@ binding = "DB"
 database_name = "nai-gallery"
 ## Run `npx wrangler d1 create nai-gallery` and paste the returned id below,
 ## then `npx wrangler d1 execute nai-gallery --remote --file=migrations/0001_initial.sql`:
-database_id = "replace-with-your-d1-database-id"
+database_id = "702e9be7-2685-4e51-a8a6-8f7636f8396c"
 
 [[r2_buckets]]
 binding = "GALLERY_BUCKET"

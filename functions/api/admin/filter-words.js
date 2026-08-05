@@ -22,7 +22,7 @@ export async function onRequestPost({ request, env }) {
   await env.DB.prepare("DELETE FROM filter_words").run();
   if (words.length > 0) {
     const placeholders = words.map(() => "(?)").join(", ");
-    await env.DB.prepare(INSERT INTO filter_words (word) VALUES )
+    await env.DB.prepare(`INSERT INTO filter_words (word) VALUES ${placeholders}`)
       .bind(...words).run();
   }
 

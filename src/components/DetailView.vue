@@ -72,16 +72,16 @@ const groupIndex = computed(() => {
   return groupImages.value.findIndex(i => i.image_id === props.image.image_id);
 });
 const groupSize = computed(() => groupImages.value.length);
+const ICON_COPY_UNUSED = "copy";
 
+const ICON_COPY = "M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z";
+const ICON_CHECK = "M5 13l4 4L19 7";
 const posShimmer = ref(false);
 const negShimmer = ref(false);
 const posCopyLabel = ref("Copy Pos");
 const negCopyLabel = ref("Copy Neg");
 const posCopyIcon = ref(ICON_COPY);
 const negCopyIcon = ref(ICON_COPY);
-
-const ICON_COPY = "M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z";
-const ICON_CHECK = "M5 13l4 4L19 7";
 
 const paramsStr = computed(() => {
   const m = props.image?.metadata;
@@ -103,8 +103,9 @@ function copyPrompt(side) {
   void document.querySelector(`.prompt-box.${isPos ? "positive" : "negative"}`)?.offsetWidth;
   shimmer.value = true;
 
-  const text = props.image?.[isPos ? "positive_prompt" : "negative_prompt"]
-    || props.image?.prompt_preview || "";
+  const text = isPos
+    ? (props.image?.positive_prompt || props.image?.prompt_preview || "")
+    : (props.image?.negative_prompt || "");
   navigator.clipboard.writeText(text).catch(() => {});
 
   icon.value = ICON_CHECK;
@@ -227,8 +228,8 @@ function copyPrompt(side) {
   overflow: hidden;
 }
 [data-theme="dark"] .prompt-box { background: rgba(255,255,255,0.03); }
-.prompt-box.positive { color: var(--secondary); }
-.prompt-box.negative { color: #A85A5A; }
+.prompt-box.positive { color: var(--prompt-positive); }
+.prompt-box.negative { color: var(--prompt-negative); }
 
 .shimmer {
   position: absolute; top: 0; left: -100%; width: 50%; height: 100%;

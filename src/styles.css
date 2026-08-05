@@ -9,6 +9,8 @@
   --glow: rgba(198, 208, 180, 0.6);
   --radius: 16px;
   --radius-sm: 8px;
+  --prompt-positive: #4A7A3A;
+  --prompt-negative: #A85A5A;
   color-scheme: light;
 }
 
@@ -21,6 +23,8 @@
   --glass-border: rgba(55, 30, 30, 0.4);
   --shadow: rgba(0, 0, 0, 0.5);
   --glow: rgba(55, 30, 30, 0.6);
+  --prompt-positive: #E8D5A3;
+  --prompt-negative: #C47A7A;
   color-scheme: dark;
 }
 

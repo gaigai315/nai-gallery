@@ -1,4 +1,4 @@
-import { json, requireAdmin } from "../../../../_lib/session.js";
+﻿import { json, requireAdmin } from "../../../../_lib/session.js";
 
 export async function onRequestGet({ request, env, params }) {
   const auth = await requireAdmin(request, env);
@@ -10,7 +10,7 @@ export async function onRequestGet({ request, env, params }) {
   const limit = Math.min(Number(url.searchParams.get("limit") || 50), 200);
   const offset = Number(url.searchParams.get("offset") || 0);
 
-  let where = "WHERE i.batch_id = ? AND i.is_active = 1";
+  let where = "WHERE i.batch_id = ?";
   const bind = [batchId];
   if (groupId) { where += " AND i.group_id = ?"; bind.push(groupId); }
 

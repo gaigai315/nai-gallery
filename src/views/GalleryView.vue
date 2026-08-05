@@ -142,16 +142,25 @@ async function fetchBatches() {
 }
 
 function openSeal(batch) {
-  if (isAdmin.value) {
+  if (isAdmin.value || batch?.unlocked_at) {
     router.push('/gallery/' + batch.batch_id);
-    return;
+  } else {
+    selectedBatch.value = batch;
+    sealVisible.value = true;
   }
-  selectedBatch.value = batch;
-  sealVisible.value = true;
 }
 
 function handleUnlocked(batch) {
   sealVisible.value = false;
+  // Update local state so the batch card reflects the unlock immediately,
+  // avoiding a re-prompt when the user returns to the gallery view.
+  const idx = batchCards.value.findIndex((b) => b.batch_id === batch?.batch_id);
+  if (idx !== -1) {
+    batchCards.value[idx] = {
+      ...batchCards.value[idx],
+      unlocked_at: new Date().toISOString(),
+    };
+  }
   if (batch?.batch_id) {
     router.push('/gallery/' + batch.batch_id);
   }

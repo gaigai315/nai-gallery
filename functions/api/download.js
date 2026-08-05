@@ -1,4 +1,4 @@
-import { hasUnlock, logAction } from "../_lib/db.js";
+import { hasUnlock, isAdmin, logAction } from "../_lib/db.js";
 import { requestAuditFields, readJson } from "../_lib/request.js";
 import { createR2SignedGetUrl } from "../_lib/r2-sign.js";
 import { json, requireSession } from "../_lib/session.js";
@@ -12,7 +12,8 @@ export async function onRequestPost({ request, env }) {
   const imageId = String(body?.image_id || "");
   const asset = body?.asset === "txt" ? "txt" : "image";
   if (!batchId || !imageId) return json({ error: "bad_request" }, 400);
-  if (!(await hasUnlock(env, auth.session.discord_id, batchId))) return json({ error: "not_unlocked" }, 403);
+  const admin = await isAdmin(env, auth.session.discord_id);
+  if (!admin && !(await hasUnlock(env, auth.session.discord_id, batchId))) return json({ error: "not_unlocked" }, 403);
 
   const dlKey = `dl:${auth.session.discord_id}`;
   const dl = checkLimit(dlKey, 30_000, 3);

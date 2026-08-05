@@ -31,10 +31,15 @@ export async function onRequestDelete({ request, env, params }) {
   const auth = await requireAdmin(request, env);
   if (auth.response) return auth.response;
 
+  // image_id is the primary key. The batch query parameter is only UI context;
+  // old records may have stale batch metadata, but must remain deletable.
+  const where = "image_id = ?";
+  const bind = [params.image_id];
   const image = await env.DB.prepare(
-    "SELECT image_id, r2_key, preview_r2_key, txt_key FROM images WHERE image_id = ?"
-  ).bind(params.image_id).first();
-  if (!image) return json({ error: "not_found" }, 404);
+    `SELECT image_id, r2_key, preview_r2_key, txt_key FROM images WHERE ${where}`
+  ).bind(...bind).first();
+  // Deletion is intentionally idempotent: a missing R2/D1 record is already gone.
+  if (!image) return json({ ok: true, already_deleted: true });
 
   // Best-effort R2 cleanup
   const keys = [image.r2_key, image.preview_r2_key, image.txt_key].filter(Boolean);
@@ -43,6 +48,6 @@ export async function onRequestDelete({ request, env, params }) {
   }
 
   // Cascade: foreign keys handle favorites, downloads_log, access_logs
-  await env.DB.prepare("DELETE FROM images WHERE image_id = ?").bind(params.image_id).run();
+  await env.DB.prepare(`DELETE FROM images WHERE ${where}`).bind(...bind).run();
   return json({ ok: true });
 }

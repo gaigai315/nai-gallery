@@ -1,24 +1,29 @@
-import { hasUnlock } from "../../_lib/db.js";
+﻿import { hasUnlock, isAdmin } from "../../_lib/db.js";
 import { json, requireSession } from "../../_lib/session.js";
 
 export async function onRequestGet({ request, env, params }) {
   const auth = await requireSession(request, env);
   if (auth.response) return auth.response;
-  if (!(await hasUnlock(env, auth.session.discord_id, params.batch_id))) return json({ error: "not_unlocked" }, 403);
+  const admin = await isAdmin(env, auth.session.discord_id);
+  if (!admin && !(await hasUnlock(env, auth.session.discord_id, params.batch_id))) return json({ error: "not_unlocked" }, 403);
 
   const url = new URL(request.url);
   const limit = Math.min(Number(url.searchParams.get("limit") || 50), 200);
   const offset = Number(url.searchParams.get("offset") || 0);
 
-  const batch = await env.DB.prepare(
-    "SELECT batch_id, batch_name, created_at, notes FROM batches WHERE batch_id = ? AND is_active = 1",
-  )
+  let batchSql = "SELECT batch_id, batch_name, created_at, notes FROM batches WHERE batch_id = ?";
+  if (!admin) batchSql += " AND is_active = 1";
+  const batch = await env.DB.prepare(batchSql)
     .bind(params.batch_id)
     .first();
   if (!batch) return json({ error: "not_found" }, 404);
 
+  // Admin sees all images regardless of is_active;
+  // non-admin only sees active images.
+  const activeClause = admin ? "1=1" : "i.is_active = 1";
+
   const totalRow = await env.DB.prepare(
-    `SELECT COUNT(*) AS count FROM images WHERE batch_id = ? AND is_active = 1`
+    `SELECT COUNT(*) AS count FROM images WHERE batch_id = ? AND ${activeClause}`
   ).bind(params.batch_id).first();
 
   const groups = await env.DB.prepare(
@@ -29,11 +34,13 @@ export async function onRequestGet({ request, env, params }) {
 
   const rows = await env.DB.prepare(
     `SELECT i.image_id, i.batch_id, i.prompt_preview, i.width, i.height, i.created_at,
-            i.group_id,
+            i.group_id, g.title AS group_title,
+            g.positive_prompt, g.negative_prompt, g.params_json,
             CASE WHEN f.image_id IS NULL THEN 0 ELSE 1 END AS is_favorite
      FROM images i
+     LEFT JOIN prompt_groups g ON g.group_id = i.group_id
      LEFT JOIN favorites f ON f.discord_id = ? AND f.batch_id = i.batch_id AND f.image_id = i.image_id
-     WHERE i.batch_id = ? AND i.is_active = 1
+     WHERE i.batch_id = ? AND ${activeClause}
      ORDER BY i.created_at ASC, i.image_id ASC
      LIMIT ? OFFSET ?`,
   )

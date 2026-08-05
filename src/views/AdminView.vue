@@ -325,7 +325,7 @@
                 </div>
                 <img
                   v-if="img.preview_r2_key"
-                  :src="'/api/preview/' + img.image_id"
+                  :src="'/api/admin/preview/' + encodeURIComponent(img.image_id) + '?batch_id=' + encodeURIComponent(imagesBatchId)"
                   :alt="img.prompt_preview"
                   class="image-card-img"
                   loading="lazy"
@@ -860,12 +860,21 @@ async function fetchImages() {
   }
 }
 
+function confirmDeleteImage(img) { deleteImageTarget.value = img; deleteImageError.value = ''; }
+
 async function doDeleteImage() {
   if (!deleteImageTarget.value) return;
   deletingImage.value = true;
   deleteImageError.value = '';
   try {
-    await apiFetch('/api/admin/images/' + deleteImageTarget.value.image_id, { method: 'DELETE' });
+    const imageId = encodeURIComponent(deleteImageTarget.value.image_id);
+    const batchId = encodeURIComponent(imagesBatchId.value);
+    try {
+      await apiFetch('/api/admin/images/' + imageId + '?batch_id=' + batchId, { method: 'DELETE', silent: true });
+    } catch (e) {
+      // A stale list can point at an image already removed from D1; refresh it as success.
+      if (e.status !== 404) throw e;
+    }
     deleteImageTarget.value = null;
     await fetchImages();
     imagesSelected.value.clear();
@@ -907,6 +916,11 @@ const compressing = ref(false);
 const compressError = ref('');
 const compressProgress = ref('');
 const compressPct = ref(0);
+
+// ---- 删除图片 ----
+const deleteImageTarget = ref(null);
+const deletingImage = ref(false);
+const deleteImageError = ref('');
 
 function startCompressImage(img) { compressTarget.value = img; compressError.value = ''; }
 
@@ -1007,7 +1021,11 @@ async function doBatchDelete() {
   deleteImageError.value = '';
   try {
     for (const id of imagesSelected.value) {
-      await apiFetch('/api/admin/images/' + id, { method: 'DELETE' });
+      try {
+        await apiFetch('/api/admin/images/' + encodeURIComponent(id) + '?batch_id=' + encodeURIComponent(imagesBatchId.value), { method: 'DELETE', silent: true });
+      } catch (e) {
+        if (e.status !== 404) throw e;
+      }
     }
     batchDeleteDialog.value = false;
     imagesSelected.value.clear();
@@ -1064,8 +1082,11 @@ async function openSettings(b) {
   // Load batch images for cover picker
   settingsLoading.value = true;
   try {
-    const data = await apiFetch('/api/gallery/' + b.batch_id);
-    settingsImages.value = data.images || [];
+    const data = await apiFetch('/api/admin/batches/' + b.batch_id + '/images?limit=200');
+    settingsImages.value = (data.images || []).map((img) => ({
+      ...img,
+      preview_url: '/api/admin/preview/' + encodeURIComponent(img.image_id) + '?batch_id=' + encodeURIComponent(b.batch_id),
+    }));
   } catch (e) {
     settingsError.value = e.message || '加载图片失败';
   } finally {
@@ -1353,7 +1374,11 @@ const done = ref(0);
 const total = ref(0);
 
 const entryById = (id) => entries.value.find((e) => e.id === id);
-const totalFiles = computed(() => entries.value.length * 3);
+const totalFiles = computed(() => {
+  let c = 0;
+  for (const e of entries.value) { c++; if (e.thumbBlob) c++; if (e.txtFile) c++; }
+  return c;
+});
 
 function backToList() {
   view.value = 'list';

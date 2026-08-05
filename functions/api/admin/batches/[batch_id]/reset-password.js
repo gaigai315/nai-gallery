@@ -1,5 +1,5 @@
-﻿import { hashPassword } from "../../../_lib/password.js";
-import { json, requireAdmin } from "../../../_lib/session.js";
+import { hashPassword } from "../../../../_lib/password.js";
+import { json, requireAdmin } from "../../../../_lib/session.js";
 
 export async function onRequestPost({ request, env, params }) {
   const auth = await requireAdmin(request, env);

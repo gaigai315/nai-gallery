@@ -26,7 +26,7 @@ function normalizePrompt(prompt, filterWords) {
 
 const MAX_LONG_EDGE = 960;
 const WEBP_QUALITY = 0.82;
-const JPEG_QUALITY = 0.90;
+const JPEG_QUALITY = 0.75;
 const SIGN_FILE_LIMIT = 600;
 const PUT_CONCURRENCY = 6;
 
@@ -87,12 +87,12 @@ export async function buildUploadPlan(files, filterWords = []) {
     }
   }
 
-  const groups = [...groupMap.values()].map((g) => ({
+  const groups = [...groupMap.values()].map((g, index) => ({
     id: g.id,
     groupKey: g.groupKey,
     positive_prompt: g.positive,
     negative_prompt: g.negative,
-    title: makeGroupTitle(g.positive),
+    title: String(index + 1),
     imageIds: g.imageIds,
   }));
 
@@ -109,11 +109,6 @@ export async function buildUploadPlan(files, filterWords = []) {
   }
 
   return { entries, groups };
-}
-
-function makeGroupTitle(positive) {
-  const firstTag = String(positive || "").split(",")[0]?.trim() || "Untitled group";
-  return firstTag.slice(0, 80);
 }
 
 /** Generate a WebP thumbnail (long edge <= 960); falls back to original preview. */
@@ -233,6 +228,19 @@ async function runPool(tasks, onProgress) {
  */
 export async function uploadBatch(batchId, entries, groups, onProgress, format = 'png') {
   const isJpeg = format === 'jpeg';
+
+  // Convert originals to JPEG when format is 'jpeg'
+  if (isJpeg) {
+    const compressResults = await Promise.all(entries.map((e) => compressToJpeg(e.file).catch(() => null)));
+    for (let i = 0; i < entries.length; i++) {
+      if (compressResults[i]) {
+        entries[i]._jpegBlob = compressResults[i].blob;
+        entries[i].width = entries[i].width || compressResults[i].width;
+        entries[i].height = entries[i].height || compressResults[i].height;
+      }
+    }
+  }
+
   const initialSignFiles = signFilesFor(entries, format);
   if (initialSignFiles.length > SIGN_FILE_LIMIT) {
     throw Object.assign(new Error("too_many_files: " + initialSignFiles.length + " > " + SIGN_FILE_LIMIT), { phase: "limit" });
@@ -257,10 +265,11 @@ export async function uploadBatch(batchId, entries, groups, onProgress, format =
   const origCt = isJpeg ? "image/jpeg" : "image/png";
   const putTasks = [];
   for (const e of entries) {
+    const origBlob = isJpeg && e._jpegBlob ? e._jpegBlob : e.file;
     const slot = byId.get(e.id);
     if (!slot) continue;
     if (slot.original) {
-      putTasks.push(() => putWithRetry(slot.original.url, e.file, origCt).then((r) => ({ kind: "original", ok: r.ok, key: slot.original.key, entry: e })));
+      putTasks.push(() => putWithRetry(slot.original.url, origBlob, origCt).then((r) => ({ kind: "original", ok: r.ok, key: slot.original.key, entry: e })));
     }
     if (e.thumbBlob && slot.preview) {
       putTasks.push(() => putWithRetry(slot.preview.url, e.thumbBlob, "image/webp").then((r) => ({ kind: "preview", ok: r.ok, key: slot.preview.key, entry: e })));

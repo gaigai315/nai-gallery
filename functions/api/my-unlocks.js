@@ -1,16 +1,20 @@
+import { isAdmin } from "../_lib/db.js";
 import { json, requireSession } from "../_lib/session.js";
 
 export async function onRequestGet({ request, env }) {
   const auth = await requireSession(request, env);
   if (auth.response) return auth.response;
+  // Admins see all batches including inactive ones
+  const isAdminUser = await isAdmin(env, auth.session.discord_id);
+  const activeClause = isAdminUser ? "1=1" : "b.is_active = 1";
   const rows = await env.DB.prepare(
-`SELECT b.batch_id, b.batch_name, b.created_at, b.expire_at, u.unlocked_at, u.last_seen_at,
-         b.notes, b.cover_image_id,
+    `SELECT b.batch_id, b.batch_name, b.created_at, b.expire_at, u.unlocked_at, u.last_seen_at,
+         b.notes, b.cover_image_id, b.is_active,
          (SELECT COUNT(*) FROM images WHERE batch_id = b.batch_id AND is_active = 1) AS image_count,
          (SELECT COUNT(*) FROM prompt_groups WHERE batch_id = b.batch_id) AS group_count
      FROM batches b
      LEFT JOIN user_batch_unlocks u ON u.batch_id = b.batch_id AND u.discord_id = ?
-     WHERE b.is_active = 1
+     WHERE ${activeClause}
      ORDER BY b.created_at DESC`,
   )
     .bind(auth.session.discord_id)
@@ -36,7 +40,7 @@ export async function onRequestGet({ request, env }) {
       for (const row of coverRows.results || []) {
         coverMap.set(
           row.batch_id,
-          `/api/preview/${encodeURIComponent(row.image_id)}?batch_id=${encodeURIComponent(row.batch_id)}`
+          `/api/cover/${encodeURIComponent(row.image_id)}?batch_id=${encodeURIComponent(row.batch_id)}`
         );
       }
     }
@@ -47,7 +51,7 @@ export async function onRequestGet({ request, env }) {
       ...b,
       notes: b.notes || "",
       cover_url: b.cover_image_id
-        ? `/api/preview/${encodeURIComponent(b.cover_image_id)}?batch_id=${encodeURIComponent(b.batch_id)}`
+        ? `/api/cover/${encodeURIComponent(b.cover_image_id)}?batch_id=${encodeURIComponent(b.batch_id)}`
         : coverMap.get(b.batch_id) || "",
     })),
   });

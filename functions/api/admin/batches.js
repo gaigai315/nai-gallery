@@ -27,21 +27,29 @@ export async function onRequestPost({ request, env }) {
   const auth = await requireAdmin(request, env);
   if (auth.response) return auth.response;
 
-  const body = await readJson(request);
-  const batchName = String(body?.batch_name || "").trim();
-  if (!batchName) return json({ error: "batch_name_required" }, 400);
+  try {
+    const body = await readJson(request);
+    const batchName = String(body?.batch_name || "").trim();
+    if (!batchName) return json({ error: "batch_name_required" }, 400);
 
-  const batchId = `${slugify(body?.batch_id || batchName)}-${randomToken(5)}`;
-  const password = randomToken(18);
-  const passwordHash = await hashPassword(password);
-  const now = new Date().toISOString();
+    const batchId = `${slugify(body?.batch_id || batchName)}-${randomToken(5)}`;
+    const password = randomToken(18);
+    const passwordHash = await hashPassword(password);
+    const now = new Date().toISOString();
 
-  await env.DB.prepare(
-`INSERT INTO batches (batch_id, batch_name, password_hash, created_at, expire_at, is_active)
-     VALUES (?, ?, ?, ?, ?, 0, ?)`,
-  )
-    .bind(batchId, batchName, passwordHash, now, body?.expire_at || null, body?.notes || null)
-    .run();
+    await env.DB.prepare(
+      `INSERT INTO batches (batch_id, batch_name, password_hash, created_at, expire_at, is_active, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(batchId, batchName, passwordHash, now, body?.expire_at || null, 0, body?.notes || null)
+      .run();
 
-  return json({ batch_id: batchId, batch_name: batchName, password });
+    return json({ batch_id: batchId, batch_name: batchName, password });
+  } catch (error) {
+    console.error("create batch failed", error);
+    return json({
+      error: "batch_create_failed",
+      detail: error instanceof Error ? error.message : String(error),
+    }, 500);
+  }
 }

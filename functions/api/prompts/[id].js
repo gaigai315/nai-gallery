@@ -12,9 +12,9 @@ export async function onRequestGet({ request, env, params }) {
   if (!row) return json({ error: "not_found" }, 404);
 
   let images = [];
-  let params = null;
+  let promptParams = null;
   try { images = JSON.parse(row.images_json || "[]"); } catch {}
-  try { params = JSON.parse(row.params_json || "null"); } catch {}
+  try { promptParams = JSON.parse(row.params_json || "null"); } catch {}
 
   let imageUrls = [];
   try {
@@ -35,7 +35,7 @@ export async function onRequestGet({ request, env, params }) {
     images_meta: images,
     title: row.title,
     content: row.content,
-    params: params,
+    params: promptParams,
     images: imageUrls,
     created_at: row.created_at,
   });
