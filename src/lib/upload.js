@@ -1,4 +1,4 @@
-ï»¿/**
+/**
  * Upload pipeline helpers for the admin panel.
  * Pure-ish functions: metadata parse -> group -> webp thumbnail -> R2 direct PUT -> manifest.
  * UI layer (AdminView.vue) drives these in sequence and renders progress.
@@ -18,8 +18,8 @@ import { apiFetch } from "./api.js";
 function normalizePrompt(prompt, filterWords) {
   if (!prompt || !filterWords || !filterWords.length) return (prompt || "").trim();
   const filterSet = new Set(filterWords.map(w => w.toLowerCase().trim()));
-  const parts = prompt.split(/[,ï¼Œ]/).map(p => p.trim());
-  const kept = parts.filter(p => !filterSet.has(p.toLowerCase()));
+  const parts = prompt.split(/[,£¬]/).map(p => p.trim());
+  const kept = parts.filter(p => p && !filterSet.has(p.toLowerCase()));
   return kept.join(", ").trim();
 }
 
@@ -103,7 +103,7 @@ export async function buildUploadPlan(files, filterWords = []) {
       groupKey: "__ungrouped__",
       positive_prompt: "",
       negative_prompt: "",
-      title: "æœªåˆ†ç»„",
+      title: "Î´·Ö×é",
       imageIds: ungrouped.map((e) => e.id),
     });
   }
@@ -257,7 +257,7 @@ export async function uploadBatch(batchId, entries, groups, onProgress, format =
       body: JSON.stringify({ batch_id: batchId, files: freshSignFiles }),
     });
   } catch (e) {
-    throw Object.assign(new Error("ç­¾åå¤±è´¥: " + e.message), { phase: "sign" });
+    throw Object.assign(new Error("Ç©ÃûÊ§°Ü: " + e.message), { phase: "sign" });
   }
 
   const byId = mapSignResult(signResp.uploads);
@@ -285,7 +285,7 @@ export async function uploadBatch(batchId, entries, groups, onProgress, format =
   });
   const failed = putResults.filter((r) => !r.ok);
   if (failed.length) {
-    throw Object.assign(new Error(failed.length + " ä¸ªæ–‡ä»¶ä¸Šä¼  R2 å¤±è´¥"), { phase: "put", failed });
+    throw Object.assign(new Error(failed.length + " ¸öÎÄ¼þÉÏ´« R2 Ê§°Ü"), { phase: "put", failed });
   }
 
   const manifestGroups = groups.map((g) => ({
@@ -307,7 +307,7 @@ export async function uploadBatch(batchId, entries, groups, onProgress, format =
       r2_key: slot?.original?.key || null,
       preview_r2_key: (e.thumbBlob && slot?.preview?.key) ? slot.preview.key : null,
       txt_key: (e.txtFile && slot?.txt?.key) ? slot.txt.key : null,
-      prompt_preview: (e.meta?.positive_prompt || e.baseName).slice(0, 256),
+      prompt_preview: (e.meta?.positive_prompt || e.baseName).slice(0, 2048),
       seed: e.meta?.seed || null,
       metadata: e.meta?.raw || null,
       width: e.width || e.meta?.width || null,
