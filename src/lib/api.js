@@ -39,10 +39,34 @@ export async function apiFetch(url, options = {}) {
   }
 
   let data;
-  try {
-    data = await res.json();
-  } catch {
-    throw new ApiError("Invalid JSON response", "parse_error", res.status);
+  const contentType = (res.headers.get("content-type") || "").toLowerCase();
+  const isJson = contentType.includes("application/json");
+
+  if (isJson) {
+    try {
+      data = await res.json();
+    } catch {
+      // JSON content-type declared but parsing failed – grab text for diagnostics
+      let bodySnippet = "";
+      try { bodySnippet = (await res.text()).slice(0, 200); } catch {}
+      throw new ApiError(
+        bodySnippet ? `Invalid JSON: ${bodySnippet}` : "Invalid JSON response",
+        "parse_error",
+        res.status,
+      );
+    }
+  } else {
+    // Non-JSON response (e.g. HTML error page, plain text)
+    let body = "";
+    try { body = await res.text(); } catch {}
+    if (!silent) {
+      addToast(`服务器错误 (${res.status})`, "error");
+    }
+    throw new ApiError(
+      body ? `Server error (${res.status}): ${body.slice(0, 200)}` : `Server error (${res.status})`,
+      `http_${res.status}`,
+      res.status,
+    );
   }
 
   if (!res.ok) {
