@@ -2,12 +2,14 @@ import { ref, computed } from "vue";
 
 const user = ref(null);
 const loading = ref(false);
+const memberView = ref(localStorage.getItem("nai-member-view") === "1");
 
 const DEV_STORAGE_KEY = "nai_dev_user";
 
 export function useUser() {
   const isLoggedIn = computed(() => Boolean(user.value));
-  const isAdmin = computed(() => user.value?.role === "admin");
+  // This only changes the local UI perspective; it never changes the account role.
+  const isAdmin = computed(() => user.value?.role === "admin" && !memberView.value);
   const avatarUrl = computed(() => {
     if (!user.value?.avatar) return "";
     return `https://cdn.discordapp.com/avatars/${user.value.discord_id}/${user.value.avatar}.png?size=64`;
@@ -53,5 +55,10 @@ export function useUser() {
     await fetch("/api/logout", { method: "POST", credentials: "include" });
   }
 
-  return { user, loading, isLoggedIn, isAdmin, avatarUrl, fetchMe, mockLogin, logout };
+  function toggleMemberView() {
+    memberView.value = !memberView.value;
+    localStorage.setItem("nai-member-view", memberView.value ? "1" : "0");
+  }
+
+  return { user, loading, isLoggedIn, isAdmin, memberView, avatarUrl, fetchMe, mockLogin, logout, toggleMemberView };
 }

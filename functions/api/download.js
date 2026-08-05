@@ -5,6 +5,7 @@ import { json, requireSession } from "../_lib/session.js";
 import { checkLimit, rateLimitResponse } from "../_lib/rate-limit.js";
 
 export async function onRequestPost({ request, env }) {
+  try {
   const auth = await requireSession(request, env);
   if (auth.response) return auth.response;
   const body = await readJson(request);
@@ -56,4 +57,8 @@ export async function onRequestPost({ request, env }) {
   const ttl = Math.min(Math.max(Number(env.DOWNLOAD_URL_TTL_SECONDS || 120), 30), 180);
   const url = await createR2SignedGetUrl(env, objectKey, ttl);
   return json({ url, expires_in: ttl });
+  } catch (error) {
+    console.error("download failed", error);
+    return json({ error: "internal_error", detail: String(error.message || "") }, 500);
+  }
 }

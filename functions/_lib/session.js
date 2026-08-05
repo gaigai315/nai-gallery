@@ -16,7 +16,10 @@ function parseCookies(request) {
       .filter(Boolean)
       .map((part) => {
         const index = part.indexOf("=");
-        return [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
+        const name = part.slice(0, index);
+        let value = part.slice(index + 1);
+        try { value = decodeURIComponent(value); } catch { /* keep raw */ }
+        return [name, value];
       }),
   );
 }

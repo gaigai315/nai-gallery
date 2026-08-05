@@ -18,6 +18,9 @@
       <router-link v-if="isAdmin" to="/admin" class="icon-btn" title="Admin panel">
         <svg viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
       </router-link>
+      <button v-if="user?.role === 'admin'" class="icon-btn" :class="{ 'member-view-active': memberView }" :title="memberView ? '退出普通成员视角' : '切换普通成员视角'" @click="toggleMemberView">
+        <svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /></svg>
+      </button>
       <button class="icon-btn" title="Sign out" @click="handleLogout">
         <svg viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
       </button>
@@ -29,7 +32,7 @@
 import { useUser } from "../stores/user.js";
 import { useTheme } from "../stores/theme.js";
 
-const { user, isAdmin, avatarUrl, logout } = useUser();
+const { user, isAdmin, memberView, avatarUrl, logout, toggleMemberView } = useUser();
 const { theme, toggle: toggleTheme } = useTheme();
 
 async function handleLogout() {
@@ -92,6 +95,11 @@ async function handleLogout() {
 }
 
 .icon-btn:hover {
+  background: var(--glass-border);
+}
+
+.member-view-active {
+  color: var(--prompt-positive);
   background: var(--glass-border);
 }
 

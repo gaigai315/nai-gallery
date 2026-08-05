@@ -515,6 +515,7 @@
         <button class="btn-outline" @click="view = 'list'">← 返回列表</button>
       </div>
       <div v-if="usersLoading" class="admin-placeholder">加载中...</div>
+      <p v-else-if="usersError" class="status-error">{{ usersError }}</p>
       <div v-else-if="!users.length" class="empty-state"><p>暂无用户</p></div>
       <table v-else class="data-table">
         <thead>
@@ -547,6 +548,7 @@
         <input v-model="dlBatchFilter" placeholder="按批次ID筛选..." class="filter-input" @input="debounceFetchDownloads" />
       </div>
       <div v-if="dlLoading" class="admin-placeholder">加载中...</div>
+      <p v-else-if="downloadsError" class="status-error">{{ downloadsError }}</p>
       <div v-else-if="!downloads.length" class="empty-state"><p>暂无记录</p></div>
       <table v-else class="data-table">
         <thead>
@@ -727,6 +729,17 @@ const filterSaving = ref(false);
 
 // ---- 统计仪表盘 ----
 const stats = reactive({ total_users: 0, total_unlocks: 0, total_downloads: 0 });
+
+const users = ref([]);
+const usersLoading = ref(false);
+const usersError = ref('');
+const downloads = ref([]);
+const dlLoading = ref(false);
+const downloadsError = ref('');
+const dlTotal = ref(0);
+const dlUserFilter = ref('');
+const dlBatchFilter = ref('');
+let dlDebounceTimer = null;
 
 async function fetchStats() {
   try {
@@ -1526,11 +1539,13 @@ function onDocClick(e) {
 function openUsers() { view.value = 'users'; fetchUsers(); }
 async function fetchUsers() {
   usersLoading.value = true;
+  usersError.value = '';
   try {
     const data = await apiFetch('/api/admin/users');
     users.value = data.users || [];
   } catch (e) {
     users.value = [];
+    usersError.value = e.message || '用户列表加载失败';
   } finally {
     usersLoading.value = false;
   }
@@ -1556,6 +1571,7 @@ async function demoteUser(discordId) {
 function openDownloads() { view.value = 'downloads'; downloads.value = []; dlTotal.value = 0; fetchDownloads(0); }
 async function fetchDownloads(offset = 0) {
   dlLoading.value = true;
+  if (offset === 0) downloadsError.value = '';
   try {
     let url = '/api/admin/downloads?limit=50&offset=' + offset;
     if (dlUserFilter.value) url += '&user=' + encodeURIComponent(dlUserFilter.value);
@@ -1566,6 +1582,7 @@ async function fetchDownloads(offset = 0) {
     dlTotal.value = data.total || downloads.value.length;
   } catch (e) {
     if (offset === 0) downloads.value = [];
+    if (offset === 0) downloadsError.value = e.message || '下载记录加载失败';
   } finally {
     dlLoading.value = false;
   }

@@ -1,6 +1,7 @@
 import { json, requireSession } from "../_lib/session.js";
 
 export async function onRequestGet({ request, env }) {
+  try {
   const auth = await requireSession(request, env);
   if (auth.response) return auth.response;
 
@@ -82,4 +83,8 @@ export async function onRequestGet({ request, env }) {
   }));
 
   return json({ results });
+  } catch (error) {
+    console.error("search failed", error);
+    return json({ error: "internal_error", detail: String(error.message || "") }, 500);
+  }
 }

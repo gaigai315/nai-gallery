@@ -2,6 +2,7 @@ import { json } from "../_lib/session.js";
 import { createR2SignedGetUrl } from "../_lib/r2-sign.js";
 
 export async function onRequestGet({ env }) {
+  try {
   const { results } = await env.DB.prepare(
     "SELECT key, value FROM site_config"
   ).all();
@@ -26,4 +27,8 @@ export async function onRequestGet({ env }) {
     about_discord_links: config.about_discord_links || "[]",
     about_author_note: config.about_author_note || "",
   });
+  } catch (error) {
+    console.error("site-config fetch failed", error);
+    return json({});
+  }
 }

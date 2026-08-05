@@ -1,18 +1,20 @@
 import { createR2SignedGetUrl } from "../_lib/r2-sign.js";
 import { json, requireSession } from "../_lib/session.js";
+import { isAdmin } from "../_lib/db.js";
 
 export async function onRequestGet({ request, env }) {
   const auth = await requireSession(request, env);
   if (auth.response) return auth.response;
 
   const discordId = auth.session.discord_id;
+  const admin = await isAdmin(env, discordId);
 
-  // Get all unlocked batch IDs for this user
-  const unlocked = await env.DB.prepare(
-    "SELECT batch_id FROM user_batch_unlocks WHERE discord_id = ?",
-  )
-    .bind(discordId)
-    .all();
+  // Admins can draw from every active batch without creating unlock records.
+  const unlocked = admin
+    ? await env.DB.prepare("SELECT batch_id FROM batches WHERE is_active = 1").all()
+    : await env.DB.prepare(
+        "SELECT batch_id FROM user_batch_unlocks WHERE discord_id = ?",
+      ).bind(discordId).all();
 
   if (!unlocked.results || unlocked.results.length === 0) {
     return json({ error: "no_unlocked_batches" }, 404);

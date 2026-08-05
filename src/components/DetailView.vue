@@ -20,7 +20,7 @@
           <div class="prompt-title">POSITIVE PROMPT</div>
           <div class="prompt-box positive">
             <div class="shimmer" :class="{ active: posShimmer }"></div>
-            {{ image?.prompt_preview || image?.positive_prompt || "" }}
+            {{ image?.prompt_preview ?? image?.positive_prompt ?? "" }}
           </div>
         </div>
         <div class="prompt-section">
@@ -104,7 +104,7 @@ function copyPrompt(side) {
   shimmer.value = true;
 
   const text = isPos
-    ? (props.image?.prompt_preview || props.image?.positive_prompt || "")
+    ? (props.image?.prompt_preview ?? props.image?.positive_prompt ?? "")
     : (props.image?.negative_prompt || "");
   navigator.clipboard.writeText(text).catch(() => {});
 

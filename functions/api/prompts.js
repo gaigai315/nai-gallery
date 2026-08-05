@@ -1,6 +1,7 @@
 ﻿import { json, requireSession } from "../_lib/session.js";
 
 export async function onRequestGet({ request, env }) {
+  try {
   const auth = await requireSession(request, env);
   if (auth.response) return auth.response;
 
@@ -30,4 +31,8 @@ export async function onRequestGet({ request, env }) {
   });
 
   return json({ posts, total: countRow?.count || 0, offset, limit });
+  } catch (error) {
+    console.error("prompts fetch failed", error);
+    return json({ error: "internal_error", detail: String(error.message || "") }, 500);
+  }
 }

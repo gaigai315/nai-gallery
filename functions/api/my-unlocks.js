@@ -2,6 +2,7 @@ import { isAdmin } from "../_lib/db.js";
 import { json, requireSession } from "../_lib/session.js";
 
 export async function onRequestGet({ request, env }) {
+  try {
   const auth = await requireSession(request, env);
   if (auth.response) return auth.response;
   // Admins see all batches including inactive ones
@@ -55,4 +56,8 @@ export async function onRequestGet({ request, env }) {
         : coverMap.get(b.batch_id) || "",
     })),
   });
+  } catch (error) {
+    console.error("my-unlocks fetch failed", error);
+    return json({ error: "internal_error", detail: String(error.message || "") }, 500);
+  }
 }

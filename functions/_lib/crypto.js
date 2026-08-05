@@ -55,7 +55,11 @@ export async function verifyPassword(password, encodedHash) {
   const [scheme, iterationsRaw, saltHex, hashHex] = String(encodedHash || "").split("$");
   if (scheme !== "pbkdf2-sha256") return false;
   const iterations = Number(iterationsRaw);
-  if (!Number.isInteger(iterations) || iterations < 100000) return false;
+  // Cloudflare Workers rejects PBKDF2 values above 100,000 instead of returning
+  // a normal comparison result. Treat legacy hashes as invalid so the API can
+  // still return JSON and the administrator can issue a compatible password.
+  if (!Number.isInteger(iterations) || iterations < 100000 || iterations > 100000) return false;
+  try {
   const key = await crypto.subtle.importKey("raw", textEncoder.encode(password), "PBKDF2", false, ["deriveBits"]);
   const derived = await crypto.subtle.deriveBits(
     { name: "PBKDF2", hash: "SHA-256", salt: hexToBytes(saltHex), iterations },
@@ -63,4 +67,7 @@ export async function verifyPassword(password, encodedHash) {
     hexToBytes(hashHex).length * 8,
   );
   return constantTimeEqual(new Uint8Array(derived), hexToBytes(hashHex));
+  } catch {
+    return false;
+  }
 }

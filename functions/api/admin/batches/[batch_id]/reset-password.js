@@ -1,6 +1,6 @@
 import { hashPassword } from "../../../../_lib/password.js";
 import { readJson } from "../../../../_lib/request.js";
-import { json, requireAdmin } from "../../../../_lib/session.js";
+import { decodePathParam, json, requireAdmin } from "../../../../_lib/session.js";
 
 export async function onRequestPost({ request, env, params }) {
   const auth = await requireAdmin(request, env);
@@ -18,11 +18,12 @@ export async function onRequestPost({ request, env, params }) {
   }
 
   const hash = await hashPassword(newPassword);
+  const batchId = decodePathParam(params.batch_id);
 
   await env.DB.prepare(
     "UPDATE batches SET password_hash = ? WHERE batch_id = ?",
   )
-    .bind(hash, params.batch_id)
+    .bind(hash, batchId)
     .run();
 
   return json({ password: newPassword });

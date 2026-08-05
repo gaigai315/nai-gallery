@@ -3,6 +3,7 @@ import { createR2SignedGetUrl } from "../../_lib/r2-sign.js";
 import { decodePathParam, json, requireSession } from "../../_lib/session.js";
 
 export async function onRequestGet({ request, env, params }) {
+  try {
   const auth = await requireSession(request, env);
   if (auth.response) return auth.response;
   const url = new URL(request.url);
@@ -22,4 +23,8 @@ export async function onRequestGet({ request, env, params }) {
   const key = image.preview_r2_key || image.r2_key;
   const signedUrl = await createR2SignedGetUrl(env, key, 120);
   return Response.redirect(signedUrl, 302);
+  } catch (error) {
+    console.error("preview fetch failed", error);
+    return json({ error: "internal_error", detail: String(error.message || "") }, 500);
+  }
 }

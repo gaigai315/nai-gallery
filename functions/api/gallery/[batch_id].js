@@ -1,7 +1,8 @@
-﻿import { hasUnlock, isAdmin } from "../../_lib/db.js";
+import { hasUnlock, isAdmin } from "../../_lib/db.js";
 import { decodePathParam, json, requireSession } from "../../_lib/session.js";
 
 export async function onRequestGet({ request, env, params }) {
+  try {
   const auth = await requireSession(request, env);
   const batchId = decodePathParam(params.batch_id);
   if (auth.response) return auth.response;
@@ -35,7 +36,7 @@ export async function onRequestGet({ request, env, params }) {
 
   const rows = await env.DB.prepare(
     `SELECT i.image_id, i.batch_id, i.prompt_preview, i.width, i.height, i.created_at,
-            i.group_id, g.title AS group_title,
+            i.group_id, i.metadata_json, g.title AS group_title,
             g.positive_prompt, g.negative_prompt, g.params_json,
             CASE WHEN f.image_id IS NULL THEN 0 ELSE 1 END AS is_favorite
      FROM images i
@@ -48,10 +49,20 @@ export async function onRequestGet({ request, env, params }) {
     .bind(auth.session.discord_id, batchId, limit, offset)
     .all();
 
-  const images = (rows.results || []).map((image) => ({
-    ...image,
-    preview_url: `/api/preview/${encodeURIComponent(image.image_id)}?batch_id=${encodeURIComponent(batchId)}`,
-  }));
+  const images = (rows.results || []).map((image) => {
+    let prompt_preview = image.prompt_preview;
+    if (!prompt_preview && image.metadata_json) {
+      try {
+        const meta = JSON.parse(image.metadata_json);
+        prompt_preview = meta.prompt || null;
+      } catch {}
+    }
+    return {
+      ...image,
+      prompt_preview: prompt_preview || image.positive_prompt || null,
+      preview_url: `/api/preview/${encodeURIComponent(image.image_id)}?batch_id=${encodeURIComponent(batchId)}`,
+    };
+  });
   return json({
     batch,
     images,
@@ -60,4 +71,8 @@ export async function onRequestGet({ request, env, params }) {
     offset,
     limit,
   });
+  } catch (error) {
+    console.error("gallery fetch failed", error);
+    return json({ error: "internal_error", detail: String(error.message || "") }, 500);
+  }
 }

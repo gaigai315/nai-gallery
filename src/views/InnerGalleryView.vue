@@ -58,6 +58,7 @@
     />
 
     <DetailView
+      :key="selectedImage?.image_id"
       :visible="detailVisible"
       :image="selectedImage"
       :group="selectedGroup"
