@@ -9,8 +9,11 @@
   --glow: rgba(198, 208, 180, 0.6);
   --radius: 16px;
   --radius-sm: 8px;
-  --prompt-positive: #4A7A3A;
-  --prompt-negative: #A85A5A;
+  /* Stronger light-theme colors stay readable through the glass panels. */
+  --prompt-positive: #176B3A;
+  --prompt-negative: #9F2535;
+  --status-error: #A12727;
+  --status-success: #176B3A;
   color-scheme: light;
 }
 
@@ -25,6 +28,8 @@
   --glow: rgba(55, 30, 30, 0.6);
   --prompt-positive: #E8D5A3;
   --prompt-negative: #C47A7A;
+  --status-error: #E58B8B;
+  --status-success: #A9D18E;
   color-scheme: dark;
 }
 

@@ -18,7 +18,7 @@ import { apiFetch } from "./api.js";
 function normalizePrompt(prompt, filterWords) {
   if (!prompt || !filterWords || !filterWords.length) return (prompt || "").trim();
   const filterSet = new Set(filterWords.map(w => w.toLowerCase().trim()));
-  const parts = prompt.split(",").map(p => p.trim());
+  const parts = prompt.split(/[,，]/).map(p => p.trim());
   const kept = parts.filter(p => !filterSet.has(p.toLowerCase()));
   return kept.join(", ").trim();
 }

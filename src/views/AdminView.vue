@@ -1676,7 +1676,7 @@ function copyToClipboard(text) {
 }
 .admin-placeholder { font-size: 14px; opacity: 0.5; }
 
-.status-error { color: #c0392b; font-size: 14px; }
+.status-error { color: var(--status-error); font-size: 14px; }
 .status-empty { font-size: 14px; opacity: 0.5; letter-spacing: 1px; }
 .status-ok { color: var(--secondary); font-size: 14px; }
 .warn { font-size: 12px; opacity: 0.7; letter-spacing: 1px; }

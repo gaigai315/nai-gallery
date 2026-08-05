@@ -52,9 +52,9 @@ import { toasts, removeToast } from "../stores/toast.js";
   flex-shrink: 0;
 }
 
-.toast-error .toast-bar { background: #C44; }
-.toast-warning .toast-bar { background: #D90; }
-.toast-info .toast-bar { background: #48B; }
+.toast-error .toast-bar { background: var(--status-error); }
+.toast-warning .toast-bar { background: #A05A00; }
+.toast-info .toast-bar { background: #17608A; }
 
 .toast-msg {
   padding: 14px 18px;
