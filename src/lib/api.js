@@ -38,11 +38,28 @@ export async function apiFetch(url, options = {}) {
     throw new ApiError("Network error", "network_error", 0);
   }
 
-  let data;
-  try {
-    data = await res.json();
-  } catch {
-    throw new ApiError("Invalid JSON response", "parse_error", res.status);
+  let data = null;
+  // 先看 Content-Type 再决定解析方式：避免把 HTML 错误页 / SPA 兜底页
+  // 误报成笼统的“JSON 解析失败”，而是给出真实状态码和响应类型。
+  const contentType = res.headers.get("content-type") || "";
+  const isJsonType = contentType.includes("json");
+
+  if (isJsonType || !contentType) {
+    try {
+      data = await res.json();
+    } catch {
+      data = null; // 声明是 JSON 但解析失败，或没有 Content-Type 但体不是 JSON
+    }
+  }
+
+  if (data === null) {
+    // 非 JSON 响应（SPA 兜底 HTML、Cloudflare 错误页、限流挑战页等）
+    const reason = isJsonType
+      ? "JSON 解析失败"
+      : `返回了非 JSON 内容 (${contentType || "无 Content-Type"})`;
+    const msg = `请求异常 (HTTP ${res.status}, ${reason})`;
+    if (!silent) addToast(msg, "error");
+    throw new ApiError(msg, "parse_error", res.status);
   }
 
   if (!res.ok) {

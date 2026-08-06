@@ -8,9 +8,9 @@ dist/
 *.local
 logs/
 
-# Private gallery data — keep outside Git
+# Private gallery data — keep outside Git (root-level only)
 private/
-uploads/
+/uploads/
 batch-*.sql
 private-*.sql
 
