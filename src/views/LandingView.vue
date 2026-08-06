@@ -93,6 +93,8 @@ onMounted(async () => {
     authError.value = '你没有访问权限，请联系管理员获取对应身份组。';
   } else if (authParam === 'failed') {
     authError.value = '登录失败，请重试。';
+  } else if (authParam === 'blacklisted') {
+    authError.value = '该 Discord 账号已被拉黑，无法登录。';
   }
 
   const passed = localStorage.getItem("pledge_passed");

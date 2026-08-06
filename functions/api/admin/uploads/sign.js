@@ -19,6 +19,7 @@ function keyFor(batchId, imageId, kind, contentType) {
 }
 
 export async function onRequestPost({ request, env }) {
+  try {
   const auth = await requireAdmin(request, env);
   if (auth.response) return auth.response;
   const body = await readJson(request);
@@ -47,4 +48,8 @@ export async function onRequestPost({ request, env }) {
   }
 
   return json({ uploads });
+  } catch (error) {
+    console.error("sign failed", error);
+    return json({ error: "internal_error", detail: String(error.message || "") }, 500);
+  }
 }

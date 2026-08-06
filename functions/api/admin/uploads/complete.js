@@ -6,6 +6,7 @@ function cleanId(value) {
 }
 
 export async function onRequestPost({ request, env }) {
+  try {
   const auth = await requireAdmin(request, env);
   if (auth.response) return auth.response;
   const body = await readJson(request);
@@ -86,4 +87,8 @@ export async function onRequestPost({ request, env }) {
   statements.push(env.DB.prepare("UPDATE batches SET is_active = 1 WHERE batch_id = ?").bind(batchId));
   await env.DB.batch(statements);
   return json({ ok: true, image_count: images.length, group_count: groups.length });
+  } catch (error) {
+    console.error("complete failed", error);
+    return json({ error: "internal_error", detail: String(error.message || "") }, 500);
+  }
 }
