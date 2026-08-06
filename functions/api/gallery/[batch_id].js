@@ -22,7 +22,9 @@ export async function onRequestGet({ request, env, params }) {
 
   // Admin sees all images regardless of is_active;
   // non-admin only sees active images.
-  const activeClause = admin ? "1=1" : "i.is_active = 1";
+  // NOTE: COUNT 查询里 FROM images 没有别名 i，这里不能用 i.is_active（会报
+  // "no such column: i.is_active"）；主查询有别名 i，未限定列名同样合法。
+  const activeClause = admin ? "1=1" : "is_active = 1";
 
   const totalRow = await env.DB.prepare(
     `SELECT COUNT(*) AS count FROM images WHERE batch_id = ? AND ${activeClause}`
