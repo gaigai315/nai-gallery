@@ -16,5 +16,35 @@ export async function onRequestGet({ request, env }) {
      ORDER BY u.created_at DESC`,
   ).all();
 
-  return json({ users: rows.results || [] });
+  const blocked = await env.DB.prepare(
+    `SELECT discord_id, note, created_at, created_by
+     FROM blacklist ORDER BY created_at DESC`,
+  ).all();
+
+  return json({ users: rows.results || [], blacklist: blocked.results || [] });
+}
+
+export async function onRequestPost({ request, env }) {
+  const auth = await requireAdmin(request, env);
+  if (auth.response) return auth.response;
+  const body = await request.json().catch(() => ({}));
+  const discordId = String(body.discord_id || "").trim();
+  if (!/^\d{17,20}$/.test(discordId)) return json({ error: "invalid_discord_id" }, 400);
+  if (discordId === auth.session.discord_id) return json({ error: "cannot_blacklist_self" }, 400);
+  await env.DB.prepare(
+    `INSERT INTO blacklist (discord_id, note, created_at, created_by)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(discord_id) DO UPDATE SET note = excluded.note`,
+  ).bind(discordId, String(body.note || "").trim() || null, new Date().toISOString(), auth.session.discord_id).run();
+  return json({ ok: true });
+}
+
+export async function onRequestDelete({ request, env }) {
+  const auth = await requireAdmin(request, env);
+  if (auth.response) return auth.response;
+  const url = new URL(request.url);
+  const discordId = String(url.searchParams.get("discord_id") || "").trim();
+  if (!/^\d{17,20}$/.test(discordId)) return json({ error: "invalid_discord_id" }, 400);
+  await env.DB.prepare("DELETE FROM blacklist WHERE discord_id = ?").bind(discordId).run();
+  return json({ ok: true });
 }

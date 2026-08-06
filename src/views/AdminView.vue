@@ -531,10 +531,30 @@
             <td>
               <button v-if="u.role === 'user'" class="btn-outline small" @click="promoteUser(u.discord_id)">提权</button>
               <button v-else-if="u.role === 'admin'" class="btn-outline small" @click="demoteUser(u.discord_id)">降权</button>
+              <button class="btn-outline small danger-text" @click="blockUser(u.discord_id)">拉黑</button>
             </td>
           </tr>
         </tbody>
       </table>
+      <div class="blacklist-panel">
+        <div class="list-toolbar">
+          <h3>黑名单</h3>
+        </div>
+        <form class="filter-row" @submit.prevent="addBlockedUser">
+          <input v-model="blacklistForm.discord_id" class="filter-input" placeholder="输入 Discord 用户 ID（可提前拉黑未登录用户）" required />
+          <input v-model="blacklistForm.note" class="filter-input" placeholder="备注（可选）" />
+          <button class="btn-danger" type="submit" :disabled="blacklistSaving">{{ blacklistSaving ? '处理中...' : '加入黑名单' }}</button>
+        </form>
+        <p v-if="blacklistError" class="status-error">{{ blacklistError }}</p>
+        <div v-if="!blacklist.length" class="empty-state"><p>暂无黑名单用户</p></div>
+        <table v-else class="data-table">
+          <thead><tr><th>Discord ID</th><th>备注</th><th>加入时间</th><th>操作</th></tr></thead>
+          <tbody><tr v-for="b in blacklist" :key="b.discord_id">
+            <td>{{ b.discord_id }}</td><td>{{ b.note || '—' }}</td><td>{{ formatDate(b.created_at) }}</td>
+            <td><button class="btn-outline small" @click="unblockUser(b.discord_id)">解除拉黑</button></td>
+          </tr></tbody>
+        </table>
+      </div>
     </section>
 
     <!-- 下载记录 -->
@@ -731,6 +751,10 @@ const filterSaving = ref(false);
 const stats = reactive({ total_users: 0, total_unlocks: 0, total_downloads: 0 });
 
 const users = ref([]);
+const blacklist = ref([]);
+const blacklistForm = ref({ discord_id: '', note: '' });
+const blacklistSaving = ref(false);
+const blacklistError = ref('');
 const usersLoading = ref(false);
 const usersError = ref('');
 const downloads = ref([]);
@@ -1543,12 +1567,33 @@ async function fetchUsers() {
   try {
     const data = await apiFetch('/api/admin/users');
     users.value = data.users || [];
+    blacklist.value = data.blacklist || [];
   } catch (e) {
     users.value = [];
     usersError.value = e.message || '用户列表加载失败';
   } finally {
     usersLoading.value = false;
   }
+}
+async function addBlockedUser() {
+  blacklistSaving.value = true;
+  blacklistError.value = '';
+  try {
+    await apiFetch('/api/admin/users', { method: 'POST', body: JSON.stringify(blacklistForm.value) });
+    blacklistForm.value = { discord_id: '', note: '' };
+    await fetchUsers();
+  } catch (e) { blacklistError.value = e.message || '加入黑名单失败'; }
+  finally { blacklistSaving.value = false; }
+}
+async function blockUser(discordId) {
+  if (!confirm('确定要拉黑这个用户吗？拉黑后将无法登录和访问网站。')) return;
+  blacklistForm.value = { discord_id: discordId, note: '' };
+  await addBlockedUser();
+}
+async function unblockUser(discordId) {
+  if (!confirm('确定解除拉黑吗？')) return;
+  try { await apiFetch('/api/admin/users?discord_id=' + encodeURIComponent(discordId), { method: 'DELETE' }); await fetchUsers(); }
+  catch (e) { blacklistError.value = e.message || '解除拉黑失败'; }
 }
 async function promoteUser(discordId) {
   if (!confirm('确定将该用户提升为管理员？')) return;

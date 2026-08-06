@@ -6,6 +6,10 @@ export async function onRequestGet({ request, env }) {
   const session = await getSession(request, env);
   if (!session) return json({ user: null });
   const user = await getUser(env, session.discord_id);
+  const blocked = await env.DB.prepare("SELECT 1 AS blocked FROM blacklist WHERE discord_id = ? LIMIT 1")
+    .bind(session.discord_id)
+    .first();
+  if (blocked) return json({ user: null, error: "blacklisted" }, 403);
   return json({ user });
   } catch (error) {
     console.error("me fetch failed", error);

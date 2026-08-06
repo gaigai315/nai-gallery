@@ -20,6 +20,13 @@ export async function isAdmin(env, discordId) {
   return user?.role === "admin";
 }
 
+export async function isBlacklisted(env, discordId) {
+  const row = await env.DB.prepare("SELECT 1 AS blocked FROM blacklist WHERE discord_id = ? LIMIT 1")
+    .bind(discordId)
+    .first();
+  return Boolean(row);
+}
+
 export async function hasUnlock(env, discordId, batchId) {
   const row = await env.DB.prepare(
     "SELECT 1 AS ok FROM user_batch_unlocks WHERE discord_id = ? AND batch_id = ? LIMIT 1",

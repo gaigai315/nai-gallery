@@ -51,6 +51,13 @@ export async function onRequestGet({ request, env }) {
 
   const user = await userResponse.json();
 
+  const blocked = await env.DB.prepare("SELECT 1 AS blocked FROM blacklist WHERE discord_id = ? LIMIT 1")
+    .bind(user.id)
+    .first();
+  if (blocked) {
+    return Response.redirect(`${env.PUBLIC_BASE_URL || url.origin}/?auth=blacklisted`, 302);
+  }
+
   // Discord guild + role verification (optional — skips if no guild setting exists).
   // DISCORD_GUILD_ROLE_PAIRS accepts comma-separated guild:role pairs.
   // The older DISCORD_GUILD_ID + DISCORD_REQUIRED_ROLE_ID settings remain supported.
