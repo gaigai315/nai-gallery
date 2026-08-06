@@ -1,64 +1,64 @@
-<template>
+ï»¿<template>
   <div class="view-container active">
     <div class="admin-shell">
-      <router-link to="/gallery" class="icon-btn back-btn" aria-label="·µ»Ø">
+      <router-link to="/gallery" class="icon-btn back-btn" aria-label="è¿”å›">
         <svg viewBox="0 0 24 24"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
       </router-link>
 
       <div class="admin-header">
-        <h1>¹ÜÀíºóÌ¨</h1>
-        <p>Åú´Î¹ÜÀí / ÉÏ´«×÷Æ· / Í¼Æ¬¹ÜÀí</p>
+        <h1>ç®¡ç†åå°</h1>
+        <p>æ‰¹æ¬¡ç®¡ç† / ä¸Šä¼ ä½œå“ / å›¾ç‰‡ç®¡ç†</p>
       </div>
 
-      <!-- Í³¼ÆÒÇ±íÅÌ (list view) -->
+      <!-- ç»Ÿè®¡ä»ªè¡¨ç›˜ (list view) -->
       <div v-if="view === 'list'" class="stats-dash">
         <div class="stat-card">
           <span class="stat-num">{{ stats.total_users }}</span>
-          <span class="stat-label">ÓÃ»§</span>
+          <span class="stat-label">ç”¨æˆ·</span>
         </div>
         <div class="stat-card">
           <span class="stat-num">{{ stats.total_unlocks }}</span>
-          <span class="stat-label">½âËø</span>
+          <span class="stat-label">è§£é”</span>
         </div>
         <div class="stat-card">
           <span class="stat-num">{{ stats.total_downloads }}</span>
-          <span class="stat-label">ÏÂÔØ</span>
+          <span class="stat-label">ä¸‹è½½</span>
         </div>
       </div>
 
-      <!-- list ÊÓÍ¼ -->
+      <!-- list è§†å›¾ -->
       <section v-if="view === 'list'" class="admin-card">
         <div class="list-toolbar">
-          <h2>Åú´ÎÁĞ±í</h2>
+          <h2>æ‰¹æ¬¡åˆ—è¡¨</h2>
           <div class="toolbar-actions">
-            <button class="btn-primary" @click="view = 'create'">+ ĞÂ½¨Åú´Î</button>
+            <button class="btn-primary" @click="view = 'create'">+ æ–°å»ºæ‰¹æ¬¡</button>
             <button class="btn-more" @click.stop="showMoreMenu = !showMoreMenu">
               <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
-              <span>¸ü¶à</span>
+              <span>æ›´å¤š</span>
             </button>
             <div v-if="showMoreMenu" class="more-dropdown" @click.stop>
-              <button class="btn-outline" @click="openAnnouncements(); showMoreMenu = false">¹«¸æ¹ÜÀí</button>
-              <button class="btn-outline" @click="openFeedbacks(); showMoreMenu = false">·´À¡²é¿´</button>
-              <button class="btn-outline" @click="openFilterWords(); showMoreMenu = false">¹ıÂË´Ê</button>
-              <button class="btn-outline" @click="openUsers(); showMoreMenu = false">ÓÃ»§¹ÜÀí</button>
-              <button class="btn-outline" @click="openDownloads(); showMoreMenu = false">ÏÂÔØ¼ÇÂ¼</button>
+              <button class="btn-outline" @click="openAnnouncements(); showMoreMenu = false">å…¬å‘Šç®¡ç†</button>
+              <button class="btn-outline" @click="openFeedbacks(); showMoreMenu = false">åé¦ˆæŸ¥çœ‹</button>
+              <button class="btn-outline" @click="openFilterWords(); showMoreMenu = false">è¿‡æ»¤è¯</button>
+              <button class="btn-outline" @click="openUsers(); showMoreMenu = false">ç”¨æˆ·ç®¡ç†</button>
+              <button class="btn-outline" @click="openDownloads(); showMoreMenu = false">ä¸‹è½½è®°å½•</button>
             </div>
           </div>
           <div class="toolbar-desktop-actions">
-            <button class="btn-primary" @click="view = 'create'">+ ĞÂ½¨Åú´Î</button>
-            <button class="btn-outline" @click="openAnnouncements">¹«¸æ¹ÜÀí</button>
-            <button class="btn-outline" @click="openFeedbacks">·´À¡²é¿´</button>
-            <button class="btn-outline" @click="openFilterWords">¹ıÂË´Ê</button>
-            <button class="btn-outline" @click="openUsers">ÓÃ»§¹ÜÀí</button>
-            <button class="btn-outline" @click="openDownloads">ÏÂÔØ¼ÇÂ¼</button>
+            <button class="btn-primary" @click="view = 'create'">+ æ–°å»ºæ‰¹æ¬¡</button>
+            <button class="btn-outline" @click="openAnnouncements">å…¬å‘Šç®¡ç†</button>
+            <button class="btn-outline" @click="openFeedbacks">åé¦ˆæŸ¥çœ‹</button>
+            <button class="btn-outline" @click="openFilterWords">è¿‡æ»¤è¯</button>
+            <button class="btn-outline" @click="openUsers">ç”¨æˆ·ç®¡ç†</button>
+            <button class="btn-outline" @click="openDownloads">ä¸‹è½½è®°å½•</button>
           </div>
         </div>
 
-        <p v-if="batchLoading" class="admin-placeholder">¼ÓÔØÖĞ...</p>
+        <p v-if="batchLoading" class="admin-placeholder">åŠ è½½ä¸­...</p>
         <p v-else-if="batchError" class="status-error">{{ batchError }}</p>
         <div v-else-if="!batches.length" class="empty-state">
-          <p>»¹Ã»ÓĞÅú´Î</p>
-          <button class="btn-primary" @click="view = 'create'">+ ĞÂ½¨µÚÒ»¸öÅú´Î</button>
+          <p>è¿˜æ²¡æœ‰æ‰¹æ¬¡</p>
+          <button class="btn-primary" @click="view = 'create'">+ æ–°å»ºç¬¬ä¸€ä¸ªæ‰¹æ¬¡</button>
         </div>
 
         <ul v-else class="batch-list">
@@ -66,40 +66,40 @@
             <div class="batch-row">
               <div class="batch-info">
                 <span class="batch-name">{{ b.batch_name }}</span>
-                <span class="batch-meta">{{ b.image_count }} ÕÅÍ¼ ¡¤ {{ b.group_count }} ×é ¡¤ {{ b.unlock_count || 0 }}ÈË½âËø ¡¤ {{ b.download_count || 0 }}´ÎÏÂÔØ</span>
+                <span class="batch-meta">{{ b.image_count }} å¼ å›¾ Â· {{ b.group_count }} ç»„ Â· {{ b.unlock_count || 0 }}äººè§£é” Â· {{ b.download_count || 0 }}æ¬¡ä¸‹è½½</span>
                 <span class="batch-date">{{ formatDate(b.created_at) }}</span>
-                <span v-if="b.expire_at" class="batch-date">¹ıÆÚ£º{{ formatDate(b.expire_at) }}</span>
+                <span v-if="b.expire_at" class="batch-date">è¿‡æœŸï¼š{{ formatDate(b.expire_at) }}</span>
               </div>
               <div class="batch-actions">
-                <label class="toggle-wrap" :title="b.is_active ? 'ÒÑÆôÓÃ' : 'ÒÑÍ£ÓÃ'">
+                <label class="toggle-wrap" :title="b.is_active ? 'å·²å¯ç”¨' : 'å·²åœç”¨'">
                   <input type="checkbox" :checked="b.is_active" @change="toggleBatch(b)" />
                   <span class="toggle-track"><span class="toggle-thumb" /></span>
                 </label>
-                <button class="icon-btn small" title="ÉÏ´«µ½´ËÅú´Î" @click="selectForUpload(b)">
+                <button class="icon-btn small" title="ä¸Šä¼ åˆ°æ­¤æ‰¹æ¬¡" @click="selectForUpload(b)">
                   <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
                 </button>
-                <button class="icon-btn small" title="Í¼Æ¬¹ÜÀí" @click="openImagesView(b)">
+                <button class="icon-btn small" title="å›¾ç‰‡ç®¡ç†" @click="openImagesView(b)">
                   <svg viewBox="0 0 24 24" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
                 </button>
-               <button class="icon-btn small danger" title="É¾³ıÅú´Î" @click="confirmDeleteBatch(b)">
+               <button class="icon-btn small danger" title="åˆ é™¤æ‰¹æ¬¡" @click="confirmDeleteBatch(b)">
                  <svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" /></svg>
                </button>
-                <button class="icon-btn small" title="Åú´ÎÉèÖÃ" @click="openSettings(b)">
+                <button class="icon-btn small" title="æ‰¹æ¬¡è®¾ç½®" @click="openSettings(b)">
                   <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" stroke="currentColor" stroke-width="1.5"/></svg>
                 </button>
-                <button class="icon-btn small" :title="expandedBatch === b.batch_id ? 'ÊÕÆğ' : 'Õ¹¿ªÏêÇé'" @click="toggleExpandBatch(b)">
+                <button class="icon-btn small" :title="expandedBatch === b.batch_id ? 'æ”¶èµ·' : 'å±•å¼€è¯¦æƒ…'" @click="toggleExpandBatch(b)">
                   <svg viewBox="0 0 24 24" :style="{ transform: expandedBatch === b.batch_id ? 'rotate(180deg)' : 'none' }"><path d="M6 9l6 6 6-6" /></svg>
                 </button>
               </div>
             </div>
-            <!-- Õ¹¿ªµÄ»î¶¯ÏêÇé -->
+            <!-- å±•å¼€çš„æ´»åŠ¨è¯¦æƒ… -->
             <div v-if="expandedBatch === b.batch_id" class="batch-activity">
-              <div v-if="activityLoading[b.batch_id]" class="admin-placeholder">¼ÓÔØÖĞ...</div>
+              <div v-if="activityLoading[b.batch_id]" class="admin-placeholder">åŠ è½½ä¸­...</div>
               <div v-else-if="activityError[b.batch_id]" class="status-error">{{ activityError[b.batch_id] }}</div>
               <div v-else class="activity-grid">
                 <div class="activity-col">
-                  <h4>½âËøÓÃ»§</h4>
-                  <p v-if="!activityCache[b.batch_id]?.unlocks?.length" class="no-data">ÔİÎŞ</p>
+                  <h4>è§£é”ç”¨æˆ·</h4>
+                  <p v-if="!activityCache[b.batch_id]?.unlocks?.length" class="no-data">æš‚æ— </p>
                   <ul v-else class="activity-list">
                     <li v-for="u in activityCache[b.batch_id].unlocks" :key="u.discord_id">
                       <strong>{{ u.username }}</strong>
@@ -108,12 +108,12 @@
                   </ul>
                 </div>
                 <div class="activity-col">
-                  <h4>×î½üÏÂÔØ</h4>
-                  <p v-if="!activityCache[b.batch_id]?.downloads?.length" class="no-data">ÔİÎŞ</p>
+                  <h4>æœ€è¿‘ä¸‹è½½</h4>
+                  <p v-if="!activityCache[b.batch_id]?.downloads?.length" class="no-data">æš‚æ— </p>
                   <ul v-else class="activity-list">
                     <li v-for="d in activityCache[b.batch_id].downloads" :key="d.discord_id + d.timestamp + d.image_id">
                       <strong>{{ d.username }}</strong>
-                      <span>{{ d.asset === 'txt' ? 'TXT' : 'Í¼Æ¬' }}</span>
+                      <span>{{ d.asset === 'txt' ? 'TXT' : 'å›¾ç‰‡' }}</span>
                       <span class="activity-time">{{ formatDate(d.timestamp) }}</span>
                     </li>
                   </ul>
@@ -124,68 +124,68 @@
         </ul>
       </section>
 
-      <!-- create ÊÓÍ¼ -->
+      <!-- create è§†å›¾ -->
       <section v-if="view === 'create'" class="admin-card">
         <div class="list-toolbar">
-          <h2>ĞÂ½¨Åú´Î</h2>
-          <button class="btn-outline" @click="view = 'list'">&larr; ·µ»ØÁĞ±í</button>
+          <h2>æ–°å»ºæ‰¹æ¬¡</h2>
+          <button class="btn-outline" @click="view = 'list'">&larr; è¿”å›åˆ—è¡¨</button>
         </div>
         <form @submit.prevent="createBatch" class="create-form">
           <label class="field">
-            <span>Åú´ÎÃû³Æ *</span>
-            <input v-model="createForm.batch_name" required placeholder="ÀıÈç£º2026-10 ÔÂ¶ÈºÏ¼¯" />
+            <span>æ‰¹æ¬¡åç§° *</span>
+            <input v-model="createForm.batch_name" required placeholder="ä¾‹å¦‚ï¼š2026-10 æœˆåº¦åˆé›†" />
           </label>
           <label class="field">
-            <span>Åú´Î ID£¨¿ÉÑ¡£©</span>
-            <input v-model="createForm.batch_id" placeholder="Áô¿Õ×Ô¶¯Éú³É" />
+            <span>æ‰¹æ¬¡ IDï¼ˆå¯é€‰ï¼‰</span>
+            <input v-model="createForm.batch_id" placeholder="ç•™ç©ºè‡ªåŠ¨ç”Ÿæˆ" />
           </label>
           <label class="field">
-            <span>¹ıÆÚÊ±¼ä£¨¿ÉÑ¡£©</span>
+            <span>è¿‡æœŸæ—¶é—´ï¼ˆå¯é€‰ï¼‰</span>
             <input type="datetime-local" v-model="createForm.expire_at" />
           </label>
-          <button type="submit" class="btn-primary" :disabled="creating">{{ creating ? '´´½¨ÖĞ...' : '´´½¨Åú´Î' }}</button>
+          <button type="submit" class="btn-primary" :disabled="creating">{{ creating ? 'åˆ›å»ºä¸­...' : 'åˆ›å»ºæ‰¹æ¬¡' }}</button>
         </form>
 
         <div v-if="createdPassword" class="password-reveal">
-          <p class="warn">ÇëÁ¢¼´¸´ÖÆ´ËÃÜÂë£¬¹Ø±Õºó½«ÓÀ¾Ã²»¿É¼û¡£</p>
+          <p class="warn">è¯·ç«‹å³å¤åˆ¶æ­¤å¯†ç ï¼Œå…³é—­åå°†æ°¸ä¹…ä¸å¯è§ã€‚</p>
           <code class="password-code">{{ createdPassword }}</code>
           <div class="password-actions">
-            <button class="btn-outline" @click="copyPassword">¸´ÖÆÃÜÂë</button>
-            <button class="btn-primary" @click="goUploadCreated">Á¢¼´ÉÏ´«</button>
+            <button class="btn-outline" @click="copyPassword">å¤åˆ¶å¯†ç </button>
+            <button class="btn-primary" @click="goUploadCreated">ç«‹å³ä¸Šä¼ </button>
           </div>
         </div>
         <p v-if="createError" class="status-error">{{ createError }}</p>
       </section>
 
-      <!-- upload ÊÓÍ¼ -->
+      <!-- upload è§†å›¾ -->
       <section v-if="view === 'upload'" class="admin-card">
         <div class="list-toolbar">
-          <h2>ÉÏ´«Óëµ¼Èë</h2>
-          <button class="btn-outline" @click="backToList">&larr; ·µ»ØÁĞ±í</button>
+          <h2>ä¸Šä¼ ä¸å¯¼å…¥</h2>
+          <button class="btn-outline" @click="backToList">&larr; è¿”å›åˆ—è¡¨</button>
         </div>
 
         <div class="upload-target">
-          <span>Ä¿±êÅú´Î£º<strong>{{ uploadBatchName }}</strong></span>
+          <span>ç›®æ ‡æ‰¹æ¬¡ï¼š<strong>{{ uploadBatchName }}</strong></span>
         </div>
 
-        <!-- ¸ñÊ½Ñ¡Ôñ -->
+        <!-- æ ¼å¼é€‰æ‹© -->
         <div class="upload-format-row">
-          <span class="format-label">±£´æ¸ñÊ½£º</span>
+          <span class="format-label">ä¿å­˜æ ¼å¼ï¼š</span>
           <label class="format-opt">
             <input type="radio" v-model="uploadFormat" value="png" />
-            <span>±£ÁôÔ­Í¼ PNG</span>
+            <span>ä¿ç•™åŸå›¾ PNG</span>
           </label>
           <label class="format-opt">
             <input type="radio" v-model="uploadFormat" value="jpeg" />
-            <span>Ñ¹ËõÎª JPEG (quality 90)</span>
+            <span>å‹ç¼©ä¸º JPEG (quality 90)</span>
           </label>
         </div>
 
         <label class="file-drop" :class="{ drag: dragging }">
           <input type="file" multiple accept=".png,.txt" @change="onFileSelect" @click="resetFile" />
-          <span v-if="!parsing && !entries.length">ÍÏ·Å»òÑ¡Ôñ PNG / TXT ÎÄ¼ş</span>
-          <span v-else-if="parsing">ÕıÔÚ½âÎöÔªÊı¾İ...</span>
-          <span v-else>ÒÑ¾ÍĞ÷ {{ entries.length }} ÕÅÍ¼Æ¬</span>
+          <span v-if="!parsing && !entries.length">æ‹–æ”¾æˆ–é€‰æ‹© PNG / TXT æ–‡ä»¶</span>
+          <span v-else-if="parsing">æ­£åœ¨è§£æå…ƒæ•°æ®...</span>
+          <span v-else>å·²å°±ç»ª {{ entries.length }} å¼ å›¾ç‰‡</span>
           <span
             class="drop-hint"
             @dragenter.prevent="dragging = true"
@@ -195,22 +195,22 @@
           />
         </label>
 
-        <!-- ·Ö×éÔ¤ÀÀ + ÊÖ¶¯±à¼­ -->
+        <!-- åˆ†ç»„é¢„è§ˆ + æ‰‹åŠ¨ç¼–è¾‘ -->
         <div v-if="entries.length" class="group-preview">
           <div class="preview-toolbar">
-            <button class="btn-outline" @click="addGroup">ĞÂ½¨·Ö×é</button>
-            <span class="hint">{{ groups.length }} ×é ¡¤ {{ entries.length }} ÕÅÍ¼</span>
+            <button class="btn-outline" @click="addGroup">æ–°å»ºåˆ†ç»„</button>
+            <span class="hint">{{ groups.length }} ç»„ Â· {{ entries.length }} å¼ å›¾</span>
           </div>
           <div v-for="g in groups" :key="g.id" class="group-block">
             <div class="group-head">
               <input
                 v-model="g.title"
                 class="group-title-input"
-                :placeholder="g.id === '__ungrouped__' ? 'Î´·Ö×é' : g.positive_prompt.slice(0,40)"
+                :placeholder="g.id === '__ungrouped__' ? 'æœªåˆ†ç»„' : g.positive_prompt.slice(0,40)"
               />
               <span class="group-count">{{ g.imageIds.length }}</span>
-              <input v-model="g.notes" class="group-notes-input" placeholder="·Ö×é±¸×¢..." />
-              <button v-if="g.id !== '__ungrouped__'" class="icon-btn small" title="É¾³ı·Ö×é£¨Í¼¹éÈëÎ´·Ö×é£©" @click="deleteGroup(g)">
+              <input v-model="g.notes" class="group-notes-input" placeholder="åˆ†ç»„å¤‡æ³¨..." />
+              <button v-if="g.id !== '__ungrouped__'" class="icon-btn small" title="åˆ é™¤åˆ†ç»„ï¼ˆå›¾å½’å…¥æœªåˆ†ç»„ï¼‰" @click="deleteGroup(g)">
                 <svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" /></svg>
               </button>
             </div>
@@ -225,29 +225,29 @@
                   class="thumb-move"
                   :value="entryById(id).groupId"
                   @change="moveImg(id, $event.target.value)"
-                  title="ÒÆ¶¯µ½·Ö×é"
+                  title="ç§»åŠ¨åˆ°åˆ†ç»„"
                 >
-                  <option v-for="og in groups" :key="og.id" :value="og.id">{{ og.title || (og.id === '__ungrouped__' ? 'Î´·Ö×é' : '·Ö×é') }}</option>
+                  <option v-for="og in groups" :key="og.id" :value="og.id">{{ og.title || (og.id === '__ungrouped__' ? 'æœªåˆ†ç»„' : 'åˆ†ç»„') }}</option>
                 </select>
-                <button class="thumb-expand" @click="toggleExpand(id)" title="²é¿´ÌáÊ¾´Ê">...</button>
+                <button class="thumb-expand" @click="toggleExpand(id)" title="æŸ¥çœ‹æç¤ºè¯">...</button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Õ¹¿ªµÄÌáÊ¾´ÊÏêÇé -->
+        <!-- å±•å¼€çš„æç¤ºè¯è¯¦æƒ… -->
         <div v-if="expandedId" class="prompt-detail">
           <div class="prompt-detail-head">
             <span>{{ entryById(expandedId)?.baseName }}</span>
             <button class="icon-btn small" @click="expandedId = null"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
           </div>
-          <h4>ÕıÃæÌáÊ¾´Ê</h4>
-          <p class="prompt-text">{{ entryById(expandedId)?.meta?.positive_prompt || '(ÎŞ)' }}</p>
-          <h4>¸ºÃæÌáÊ¾´Ê</h4>
-          <p class="prompt-text">{{ entryById(expandedId)?.meta?.negative_prompt || '(ÎŞ)' }}</p>
+          <h4>æ­£é¢æç¤ºè¯</h4>
+          <p class="prompt-text">{{ entryById(expandedId)?.meta?.positive_prompt || '(æ— )' }}</p>
+          <h4>è´Ÿé¢æç¤ºè¯</h4>
+          <p class="prompt-text">{{ entryById(expandedId)?.meta?.negative_prompt || '(æ— )' }}</p>
         </div>
 
-        <!-- ½ø¶È + Ìá½» -->
+        <!-- è¿›åº¦ + æäº¤ -->
         <div v-if="uploading" class="upload-progress">
           <p>{{ phaseLabel }}</p>
           <div class="progress-bar"><span :style="{ width: pct + '%' }" /></div>
@@ -255,31 +255,31 @@
 
         <div v-if="uploadError" class="status-error">{{ uploadError }}</div>
         <div v-if="uploadResult" class="status-ok">
-          ÉÏ´«Íê³É£º{{ uploadResult.image_count }} ÕÅÍ¼£¬{{ uploadResult.group_count }} ¸ö·Ö×é¡£
+          ä¸Šä¼ å®Œæˆï¼š{{ uploadResult.image_count }} å¼ å›¾ï¼Œ{{ uploadResult.group_count }} ä¸ªåˆ†ç»„ã€‚
         </div>
 
         <button
           v-if="entries.length && !uploading"
           class="btn-primary"
           @click="submitUpload"
-        >Ìá½»ÉÏ´«£¨{{ entries.length }} ÕÅÍ¼£©</button>
+        >æäº¤ä¸Šä¼ ï¼ˆ{{ entries.length }} å¼ å›¾ï¼‰</button>
 
-        <p v-if="entries.length && totalFiles > 600" class="warn">ÎÄ¼şÊı³¬¹ı 600 ÉÏÏŞ£¬Çë·ÖÅúÉÏ´«¡£</p>
+        <p v-if="entries.length && totalFiles > 600" class="warn">æ–‡ä»¶æ•°è¶…è¿‡ 600 ä¸Šé™ï¼Œè¯·åˆ†æ‰¹ä¸Šä¼ ã€‚</p>
       </section>
 
-      <!-- ========== Í¼Æ¬¹ÜÀíÊÓÍ¼ ========== -->
+      <!-- ========== å›¾ç‰‡ç®¡ç†è§†å›¾ ========== -->
       <section v-if="view === 'images'" class="admin-card images-shell">
         <div class="list-toolbar">
-          <h2>Í¼Æ¬¹ÜÀí ¡ª {{ imagesBatchName }}</h2>
-          <button class="btn-outline" @click="backToList">&larr; ·µ»ØÁĞ±í</button>
+          <h2>å›¾ç‰‡ç®¡ç† â€” {{ imagesBatchName }}</h2>
+          <button class="btn-outline" @click="backToList">&larr; è¿”å›åˆ—è¡¨</button>
         </div>
 
         <div class="images-layout">
           <aside class="images-sidebar">
-            <h4>·Ö×éÉ¸Ñ¡</h4>
+            <h4>åˆ†ç»„ç­›é€‰</h4>
             <ul class="group-tree">
               <li :class="{ active: imagesGroupFilter === '' }" @click="imagesGroupFilter = ''; imagesPage = 1; fetchImages()">
-                È«²¿ ({{ imagesTotalAll }})
+                å…¨éƒ¨ ({{ imagesTotalAll }})
               </li>
               <li
                 v-for="g in imageGroups"
@@ -287,31 +287,31 @@
                 :class="{ active: imagesGroupFilter === g.group_id }"
                 @click="imagesGroupFilter = g.group_id; imagesPage = 1; fetchImages()"
               >
-                {{ g.title || 'Î´ÃüÃû' }}
+                {{ g.title || 'æœªå‘½å' }}
               </li>
             </ul>
             <div class="new-group-zone">
-              <button v-if="!showNewGroupInput" class="btn-outline tiny" @click="showNewGroupInput = true">+ ĞÂ½¨·Ö×é</button>
+              <button v-if="!showNewGroupInput" class="btn-outline tiny" @click="showNewGroupInput = true">+ æ–°å»ºåˆ†ç»„</button>
               <form v-else class="new-group-form" @submit.prevent="createGroup">
-                <input v-model="newGroupName" placeholder="·Ö×éÃû³Æ" class="new-group-input" />
-                <button type="submit" class="btn-primary tiny">È·¶¨</button>
-                <button type="button" class="btn-outline tiny" @click="showNewGroupInput = false; newGroupName = ''">È¡Ïû</button>
+                <input v-model="newGroupName" placeholder="åˆ†ç»„åç§°" class="new-group-input" />
+                <button type="submit" class="btn-primary tiny">ç¡®å®š</button>
+                <button type="button" class="btn-outline tiny" @click="showNewGroupInput = false; newGroupName = ''">å–æ¶ˆ</button>
               </form>
             </div>
           </aside>
 
           <div class="images-main">
             <div v-if="imagesSelected.size" class="images-batch-bar">
-              <span>ÒÑÑ¡ {{ imagesSelected.size }} ÕÅ</span>
-              <button class="btn-outline" @click="batchMoveImages">ÅúÁ¿ÒÆ¶¯</button>
-              <button class="btn-outline" @click="batchCompressImages">ÅúÁ¿Ñ¹Ëõ</button>
-              <button class="btn-danger" @click="batchDeleteImages">ÅúÁ¿É¾³ı</button>
-              <button class="btn-outline" @click="imagesSelected.clear()">È¡ÏûÑ¡Ôñ</button>
+              <span>å·²é€‰ {{ imagesSelected.size }} å¼ </span>
+              <button class="btn-outline" @click="batchMoveImages">æ‰¹é‡ç§»åŠ¨</button>
+              <button class="btn-outline" @click="batchCompressImages">æ‰¹é‡å‹ç¼©</button>
+              <button class="btn-danger" @click="batchDeleteImages">æ‰¹é‡åˆ é™¤</button>
+              <button class="btn-outline" @click="imagesSelected.clear()">å–æ¶ˆé€‰æ‹©</button>
             </div>
 
-            <p v-if="imagesLoading" class="admin-placeholder">¼ÓÔØÖĞ...</p>
+            <p v-if="imagesLoading" class="admin-placeholder">åŠ è½½ä¸­...</p>
             <p v-else-if="imagesError" class="status-error">{{ imagesError }}</p>
-            <p v-else-if="!imagesData.length" class="admin-placeholder">´ËÅú´ÎÔİÎŞÍ¼Æ¬</p>
+            <p v-else-if="!imagesData.length" class="admin-placeholder">æ­¤æ‰¹æ¬¡æš‚æ— å›¾ç‰‡</p>
 
             <div v-else class="images-grid">
               <div
@@ -321,7 +321,7 @@
                 :class="{ selected: imagesSelected.has(img.image_id) }"
               >
                 <div class="image-card-check" @click="toggleImageSelect(img.image_id)">
-                  <span class="check-box">{{ imagesSelected.has(img.image_id) ? '?' : '' }}</span>
+                  <span class="check-box">{{ imagesSelected.has(img.image_id) ? 'âœ“' : '' }}</span>
                 </div>
                 <img
                   v-if="img.preview_r2_key"
@@ -330,20 +330,20 @@
                   class="image-card-img"
                   loading="lazy"
                 />
-                <div v-else class="image-card-placeholder">ÎŞÔ¤ÀÀ</div>
+                <div v-else class="image-card-placeholder">æ— é¢„è§ˆ</div>
                 <div class="image-card-info">
-                  <p class="image-card-prompt">{{ img.prompt_preview?.slice(0, 50) || '(ÎŞ)' }}</p>
+                  <p class="image-card-prompt">{{ img.prompt_preview?.slice(0, 50) || '(æ— )' }}</p>
                   <p class="image-card-meta">
                     <span v-if="img.seed">seed: {{ img.seed }}</span>
-                    <span v-if="img.width">{{ img.width }}¡Á{{ img.height }}</span>
+                    <span v-if="img.width">{{ img.width }}Ã—{{ img.height }}</span>
                     <span>{{ formatDate(img.created_at) }}</span>
                   </p>
                   <p class="image-card-group">{{ img.group_title }}</p>
                 </div>
                 <div class="image-card-actions">
-                  <button class="btn-outline tiny" @click="startMoveImage(img)">ÒÆ¶¯</button>
-                  <button class="btn-outline tiny" @click="startCompressImage(img)">Ñ¹Ëõ</button>
-                  <button class="btn-danger tiny" @click="confirmDeleteImage(img)">É¾³ı</button>
+                  <button class="btn-outline tiny" @click="startMoveImage(img)">ç§»åŠ¨</button>
+                  <button class="btn-outline tiny" @click="startCompressImage(img)">å‹ç¼©</button>
+                  <button class="btn-danger tiny" @click="confirmDeleteImage(img)">åˆ é™¤</button>
                 </div>
               </div>
             </div>
@@ -358,251 +358,258 @@
       </section>
     </div>
 
-    <!-- ====== µ¯´°²ã ====== -->
+    <!-- ====== å¼¹çª—å±‚ ====== -->
 
-    <!-- É¾³ıÈ·ÈÏµ¯´° -->
+    <!-- åˆ é™¤ç¡®è®¤å¼¹çª— -->
 
     <Teleport to="body">
       <div v-if="deleteTarget" class="modal-overlay" @click.self="deleteTarget = null">
         <div class="modal-card">
-          <h3>È·ÈÏÉ¾³ı</h3>
-          <p>È·¶¨ÒªÉ¾³ıÅú´Î <strong>{{ deleteTarget.batch_name }}</strong> Âğ£¿</p>
-          <p class="modal-warn">´Ë²Ù×÷²»¿É³·Ïú£¬Åú´ÎÄÚËùÓĞÍ¼Æ¬¡¢·Ö×é¡¢ÊÕ²Ø¼ÇÂ¼½«±»Ò»²¢É¾³ı¡£</p>
+          <h3>ç¡®è®¤åˆ é™¤</h3>
+          <p>ç¡®å®šè¦åˆ é™¤æ‰¹æ¬¡ <strong>{{ deleteTarget.batch_name }}</strong> å—ï¼Ÿ</p>
+          <p class="modal-warn">æ­¤æ“ä½œä¸å¯æ’¤é”€ï¼Œæ‰¹æ¬¡å†…æ‰€æœ‰å›¾ç‰‡ã€åˆ†ç»„ã€æ”¶è—è®°å½•å°†è¢«ä¸€å¹¶åˆ é™¤ã€‚</p>
           <div class="modal-actions">
-            <button class="btn-outline" @click="deleteTarget = null">È¡Ïû</button>
-            <button class="btn-danger" :disabled="deleting" @click="doDeleteBatch">{{ deleting ? 'É¾³ıÖĞ...' : 'È·ÈÏÉ¾³ı' }}</button>
+            <button class="btn-outline" @click="deleteTarget = null">å–æ¶ˆ</button>
+            <button class="btn-danger" :disabled="deleting" @click="doDeleteBatch">{{ deleting ? 'åˆ é™¤ä¸­...' : 'ç¡®è®¤åˆ é™¤' }}</button>
           </div>
           <p v-if="deleteError" class="status-error">{{ deleteError }}</p>
         </div>
       </div>
     </Teleport>
 
-    <!-- ¹«¸æ¹ÜÀíÊÓÍ¼ -->
+    <!-- å…¬å‘Šç®¡ç†è§†å›¾ -->
     <section v-if="view === 'announcements'" class="admin-card">
       <div class="list-toolbar">
-        <h2>¹«¸æ¹ÜÀí</h2>
-        <button class="btn-outline" @click="view = 'list'">&larr; ·µ»ØÁĞ±í</button>
+        <h2>å…¬å‘Šç®¡ç†</h2>
+        <button class="btn-outline" @click="view = 'list'">&larr; è¿”å›åˆ—è¡¨</button>
       </div>
 
       <div class="announce-list" v-if="!editingAnnouncement">
         <div v-if="!allAnnouncements.length" class="empty-state">
-          <p>»¹Ã»ÓĞ¹«¸æ</p>
-          <button class="btn-primary" @click="newAnnouncement">+ ĞÂ½¨¹«¸æ</button>
+          <p>è¿˜æ²¡æœ‰å…¬å‘Š</p>
+          <button class="btn-primary" @click="newAnnouncement">+ æ–°å»ºå…¬å‘Š</button>
         </div>
         <ul v-else class="batch-list">
           <li v-for="a in allAnnouncements" :key="a.id" class="batch-row-wrap">
             <div class="batch-row">
               <div class="batch-info">
                 <span class="batch-name">{{ a.title }}</span>
-                <span class="batch-meta">ÅÅĞò£º{{ a.sort_order }} ¡¤ {{ a.is_active ? 'ÒÑÆôÓÃ' : 'ÒÑÍ£ÓÃ' }} ¡¤ {{ formatDate(a.created_at) }}</span>
+                <span class="batch-meta">æ’åºï¼š{{ a.sort_order }} Â· {{ a.is_active ? 'å·²å¯ç”¨' : 'å·²åœç”¨' }} Â· {{ formatDate(a.created_at) }}</span>
               </div>
               <div class="batch-actions">
                 <label class="toggle-wrap">
                   <input type="checkbox" :checked="a.is_active" @change="toggleAnnouncement(a)" />
                   <span class="toggle-track"><span class="toggle-thumb" /></span>
                 </label>
-                <button class="icon-btn small" title="ÉÏÒÆ" @click="moveAnnouncement(a, -1)" :disabled="a.sort_order <= 0">
+                <button class="icon-btn small" title="ä¸Šç§»" @click="moveAnnouncement(a, -1)" :disabled="a.sort_order <= 0">
                   <svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6" /></svg>
                 </button>
-                <button class="icon-btn small" title="ÏÂÒÆ" @click="moveAnnouncement(a, 1)">
+                <button class="icon-btn small" title="ä¸‹ç§»" @click="moveAnnouncement(a, 1)">
                   <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
                 </button>
-                <button class="icon-btn small" title="±à¼­" @click="editAnnouncement(a)">
+                <button class="icon-btn small" title="ç¼–è¾‘" @click="editAnnouncement(a)">
                   <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                 </button>
-                <button class="icon-btn small danger" title="É¾³ı" @click="deleteAnnouncement(a)">
+                <button class="icon-btn small danger" title="åˆ é™¤" @click="deleteAnnouncement(a)">
                   <svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" /></svg>
                 </button>
               </div>
             </div>
           </li>
         </ul>
-        <button v-if="allAnnouncements.length" class="btn-outline" style="margin-top: 12px" @click="newAnnouncement">+ ĞÂ½¨¹«¸æ</button>
+        <button v-if="allAnnouncements.length" class="btn-outline" style="margin-top: 12px" @click="newAnnouncement">+ æ–°å»ºå…¬å‘Š</button>
       </div>
 
-      <!-- ĞÂ½¨/±à¼­¹«¸æ±íµ¥ -->
+      <!-- æ–°å»º/ç¼–è¾‘å…¬å‘Šè¡¨å• -->
       <form v-if="editingAnnouncement" @submit.prevent="saveAnnouncement" class="create-form">
         <label class="field">
-          <span>±êÌâ *</span>
-          <input v-model="announceForm.title" required placeholder="¹«¸æ±êÌâ" />
+          <span>æ ‡é¢˜ *</span>
+          <input v-model="announceForm.title" required placeholder="å…¬å‘Šæ ‡é¢˜" />
         </label>
         <label class="field">
-          <span>ÄÚÈİ *</span>
-          <textarea v-model="announceForm.content" rows="4" required placeholder="¹«¸æÕıÎÄ..." class="settings-textarea"></textarea>
+          <span>å†…å®¹ *</span>
+          <textarea v-model="announceForm.content" rows="4" required placeholder="å…¬å‘Šæ­£æ–‡..." class="settings-textarea"></textarea>
         </label>
         <label class="field">
-          <span>Í¼Æ¬ URL£¨¿ÉÑ¡£©</span>
+          <span>å›¾ç‰‡ URLï¼ˆå¯é€‰ï¼‰</span>
           <input v-model="announceForm.image_url" placeholder="https://..." />
         </label>
         <div style="display: flex; gap: 12px">
           <button type="submit" class="btn-primary" :disabled="announceSaving">
-            {{ announceSaving ? '±£´æÖĞ...' : '±£´æ¹«¸æ' }}
+            {{ announceSaving ? 'ä¿å­˜ä¸­...' : 'ä¿å­˜å…¬å‘Š' }}
           </button>
-          <button type="button" class="btn-outline" @click="cancelEditAnnouncement">È¡Ïû</button>
+          <button type="button" class="btn-outline" @click="cancelEditAnnouncement">å–æ¶ˆ</button>
         </div>
         <p v-if="announceError" class="status-error">{{ announceError }}</p>
       </form>
 
-      <!-- ĞûÊÄÎÄ±¾±à¼­ -->
+      <!-- å®£èª“æ–‡æœ¬ç¼–è¾‘ -->
       <div class="pledge-editor">
-        <h3>ÓÃ»§ĞûÊÄÎÄ±¾</h3>
-        <p class="pledge-hint">ĞŞ¸ÄºóËùÓĞÓÃ»§ÏÂ´Î·ÃÎÊĞèÖØĞÂĞûÊÄ¡£</p>
-        <textarea v-model="pledgeTextAdmin" rows="3" class="settings-textarea" placeholder="Áô¿ÕÔò²»ÆôÓÃĞûÊÄ..."></textarea>
+        <h3>ç”¨æˆ·å®£èª“æ–‡æœ¬</h3>
+        <p class="pledge-hint">ä¿®æ”¹åæ‰€æœ‰ç”¨æˆ·ä¸‹æ¬¡è®¿é—®éœ€é‡æ–°å®£èª“ã€‚</p>
+        <textarea v-model="pledgeTextAdmin" rows="3" class="settings-textarea" placeholder="ç•™ç©ºåˆ™ä¸å¯ç”¨å®£èª“..."></textarea>
         <button class="btn-outline" :disabled="pledgeSaving" @click="savePledgeText" style="margin-top: 12px">
-          {{ pledgeSaving ? '±£´æÖĞ...' : '±£´æĞûÊÄÎÄ±¾' }}
+          {{ pledgeSaving ? 'ä¿å­˜ä¸­...' : 'ä¿å­˜å®£èª“æ–‡æœ¬' }}
         </button>
       </div>
     </section>
 
-    <!-- ¹ıÂË´Ê¹ÜÀíÊÓÍ¼ -->
+    <!-- è¿‡æ»¤è¯ç®¡ç†è§†å›¾ -->
     <section v-if="view === 'filter-words'" class="admin-card">
       <div class="list-toolbar">
-        <h2>¹ıÂË´Ê¹ÜÀí</h2>
-        <button class="btn-outline" @click="view = 'list'">¡û ·µ»ØÁĞ±í</button>
+        <h2>è¿‡æ»¤è¯ç®¡ç†</h2>
+        <button class="btn-outline" @click="view = 'list'">â† è¿”å›åˆ—è¡¨</button>
       </div>
-      <p class="pledge-hint">ÉÏ´«Ê±ºöÂÔÕâĞ©´Ê£¬Í¬Ò»´®µÄ²»Í¬±äÌå£¨Èç 1girl / 1boy£©»á×Ô¶¯¹éÈëÒ»×é¡£Ô­ÌáÊ¾´Ê²»ÊÜÓ°Ïì¡£</p>
+      <p class="pledge-hint">ä¸Šä¼ æ—¶å¿½ç•¥è¿™äº›è¯ï¼ŒåŒä¸€ä¸²çš„ä¸åŒå˜ä½“ï¼ˆå¦‚ 1girl / 1boyï¼‰ä¼šè‡ªåŠ¨å½’å…¥ä¸€ç»„ã€‚åŸæç¤ºè¯ä¸å—å½±å“ã€‚</p>
       <div class="filter-tags">
         <span v-for="(w, i) in filterWords" :key="i" class="filter-tag">
           {{ w }}
-          <button class="tag-remove" @click="filterWords.splice(i, 1)">¡Á</button>
+          <button class="tag-remove" @click="filterWords.splice(i, 1)">Ã—</button>
         </span>
-        <span v-if="!filterWords.length" style="opacity:0.4;font-size:13px">»¹Ã»ÓĞ¹ıÂË´Ê£¬ÔÚÏÂ·½Ìí¼Ó</span>
+        <span v-if="!filterWords.length" style="opacity:0.4;font-size:13px">è¿˜æ²¡æœ‰è¿‡æ»¤è¯ï¼Œåœ¨ä¸‹æ–¹æ·»åŠ </span>
       </div>
       <div style="display:flex;gap:12px;margin-top:12px">
-        <input v-model="newFilterWord" class="field-input" placeholder="ÊäÈë¹ıÂË´Ê£¬Èç 1girl" style="flex:1" @keyup.enter="addFilterWord" />
-        <button class="btn-outline" @click="addFilterWord">Ìí¼Ó</button>
+        <input v-model="newFilterWord" class="field-input" placeholder="è¾“å…¥è¿‡æ»¤è¯ï¼Œå¦‚ 1girl" style="flex:1" @keyup.enter="addFilterWord" />
+        <button class="btn-outline" @click="addFilterWord">æ·»åŠ </button>
       </div>
       <div style="margin-top:16px">
         <button class="btn-primary" :disabled="filterSaving" @click="doSaveFilterWords">
-          {{ filterSaving ? '±£´æÖĞ...' : '±£´æ¹ıÂË´Ê' }}
+          {{ filterSaving ? 'ä¿å­˜ä¸­...' : 'ä¿å­˜è¿‡æ»¤è¯' }}
         </button>
       </div>
     </section>
 
-    <!-- ·´À¡²é¿´ÊÓÍ¼ -->
+    <!-- åé¦ˆæŸ¥çœ‹è§†å›¾ -->
     <section v-if="view === 'feedbacks'" class="admin-card">
       <div class="list-toolbar">
-        <h2>·´À¡ÁĞ±í</h2>
-        <button class="btn-outline" @click="view = 'list'">¡û ·µ»ØÁĞ±í</button>
+        <h2>åé¦ˆåˆ—è¡¨</h2>
+        <button class="btn-outline" @click="view = 'list'">â† è¿”å›åˆ—è¡¨</button>
       </div>
-      <div v-if="feedbackLoading" class="admin-placeholder">¼ÓÔØÖĞ...</div>
+      <div v-if="feedbackLoading" class="admin-placeholder">åŠ è½½ä¸­...</div>
       <div v-else-if="!feedbacks.length" class="empty-state">
-        <p>ÔİÎŞ·´À¡</p>
+        <p>æš‚æ— åé¦ˆ</p>
       </div>
       <ul v-else class="batch-list">
         <li v-for="f in feedbacks" :key="f.id" class="batch-row-wrap">
           <div class="batch-row">
             <div class="batch-info">
-              <span class="batch-name">{{ f.username || 'ÄäÃû' }}</span>
+              <span class="batch-name">{{ f.username || 'åŒ¿å' }}</span>
               <span class="batch-meta">{{ f.content?.slice(0, 200) }}</span>
               <span class="batch-meta">{{ formatDate(f.created_at) }}</span>
             </div>
             <div class="batch-actions">
-              <button class="icon-btn small" title="É¾³ı" @click="deleteFeedback(f)">¡Á</button>
+              <button class="icon-btn small" title="åˆ é™¤" @click="deleteFeedback(f)">Ã—</button>
             </div>
           </div>
         </li>
       </ul>
       <div v-if="feedbackTotal > feedbacks.length" style="text-align:center;margin-top:12px">
-        <button class="btn-outline" @click="fetchFeedbacks(feedbacks.length)">¼ÓÔØ¸ü¶à</button>
+        <button class="btn-outline" @click="fetchFeedbacks(feedbacks.length)">åŠ è½½æ›´å¤š</button>
       </div>
     </section>
 
-    <!-- ÓÃ»§¹ÜÀí -->
+    <!-- ç”¨æˆ·ç®¡ç† -->
     <section v-if="view === 'users'" class="admin-card">
       <div class="list-toolbar">
-        <h2>ÓÃ»§¹ÜÀí</h2>
-        <button class="btn-outline" @click="openBanDialog">+ À­ºÚÓÃ»§</button>
-        <button class="btn-outline" @click="view = 'list'">¡û ·µ»ØÁĞ±í</button>
+        <h2>ç”¨æˆ·ç®¡ç†</h2>
+        <div class="toolbar-actions">
+          <button class="btn-outline" @click="openBanDialog">+ æ‹‰é»‘ç”¨æˆ·</button>
+          <button class="btn-outline" @click="view = 'list'">â† è¿”å›åˆ—è¡¨</button>
+        </div>
       </div>
-      <div v-if="usersLoading" class="admin-placeholder">¼ÓÔØÖĞ...</div>
+      <div v-if="usersLoading" class="admin-placeholder">åŠ è½½ä¸­...</div>
       <p v-else-if="usersError" class="status-error">{{ usersError }}</p>
-      <div v-else-if="!users.length" class="empty-state"><p>ÔİÎŞÓÃ»§</p></div>
+      <div v-else-if="!users.length" class="empty-state"><p>æš‚æ— ç”¨æˆ·</p></div>
       <table v-else class="data-table">
         <thead>
-          <tr><th>ÓÃ»§</th><th>½ÇÉ«</th><th>×´Ì¬</th><th>½âËøÊı</th><th>ÏÂÔØÊı</th><th>×îºó»îÔ¾</th><th>²Ù×÷</th></tr>
+          <tr><th>ç”¨æˆ·</th><th>è§’è‰²</th><th>çŠ¶æ€</th><th>è§£é”æ•°</th><th>ä¸‹è½½æ•°</th><th>æœ€åæ´»è·ƒ</th><th>æ“ä½œ</th></tr>
         </thead>
         <tbody>
           <tr v-for="u in users" :key="u.discord_id">
             <td><strong>{{ u.username }}</strong><br /><small>{{ u.discord_id }}</small></td>
-            <td><span :class="['role-badge', u.role]">{{ u.role === 'admin' ? '¹ÜÀíÔ±' : 'ÓÃ»§' }}</span></td>
-            <td><span v-if="u.is_banned" class="role-badge banned">ÒÑÀ­ºÚ</span><span v-else class="status-ok">Õı³£</span></td>
+            <td><span :class="['role-badge', u.role]">{{ u.role === 'admin' ? 'ç®¡ç†å‘˜' : 'ç”¨æˆ·' }}</span></td>
+            <td><span v-if="u.is_banned" class="role-badge banned">å·²æ‹‰é»‘</span><span v-else class="status-ok">æ­£å¸¸</span></td>
             <td>{{ u.unlock_count }}</td>
             <td>{{ u.download_count }}</td>
-            <td>{{ u.last_active ? formatDate(u.last_active) : '´ÓÎ´' }}</td>
+            <td>{{ u.last_active ? formatDate(u.last_active) : 'ä»æœª' }}</td>
             <td class="action-cell">
-              <button v-if="u.role === 'user'" class="btn-outline small" @click="promoteUser(u.discord_id)">ÌáÈ¨</button>
-              <button v-else-if="u.role === 'admin'" class="btn-outline small" @click="demoteUser(u.discord_id)">½µÈ¨</button>
-              <button v-if="!u.is_banned" class="btn-outline small btn-danger" @click="banUser(u.discord_id, u.username)">À­ºÚ</button>
-              <button v-else class="btn-outline small" @click="unbanUser(u.discord_id, u.username)">½â·â</button>
+              <button v-if="u.role === 'user'" class="btn-outline small" @click="promoteUser(u.discord_id)">ææƒ</button>
+              <button v-else-if="u.role === 'admin'" class="btn-outline small" @click="demoteUser(u.discord_id)">é™æƒ</button>
+              <button v-if="!u.is_banned" class="btn-danger small" @click="banUser(u.discord_id, u.username)">æ‹‰é»‘</button>
+              <button v-else class="btn-outline small" @click="unbanUser(u.discord_id, u.username)">è§£å°</button>
             </td>
           </tr>
         </tbody>
       </table>
     </section>
 
-    <!-- À­ºÚ¶Ô»°¿ò -->
+    <!-- æ‹‰é»‘ç”¨æˆ·å¯¹è¯æ¡† -->
     <div v-if="banDialog" class="modal-overlay" @click.self="banDialog = false">
       <div class="modal-card">
-        <h3>À­ºÚÓÃ»§</h3>
-        <p class="modal-hint">¼´Ê¹¸ÃÓÃ»§´ÓÎ´µÇÂ¼¹ıÒ²¿ÉÒÔÀ­ºÚ¡£</p>
-        <label>Discord ID <input v-model="banDiscordId" placeholder="ÓÃ»§ Discord ID" class="field-input" /></label>
-        <label>Ô­Òò£¨¿ÉÑ¡£© <input v-model="banReason" placeholder="À­ºÚÔ­Òò" class="field-input" /></label>
+        <h3>æ‹‰é»‘ç”¨æˆ·</h3>
+        <div class="form-group">
+          <label>ç”¨æˆ· Discord ID</label>
+          <input v-model="banDiscordId" class="field" placeholder="è¯·è¾“å…¥ Discord ID" />
+        </div>
+        <div class="form-group">
+          <label>æ‹‰é»‘åŸå› ï¼ˆå¯é€‰ï¼‰</label>
+          <input v-model="banReason" class="field" placeholder="é€‰å¡«" />
+        </div>
         <div class="modal-actions">
-          <button class="btn" @click="banUser()">È·¶¨À­ºÚ</button>
-          <button class="btn-outline" @click="banDialog = false">È¡Ïû</button>
+          <button class="btn-outline" @click="banDialog = false">å–æ¶ˆ</button>
+          <button class="btn-danger" @click="banUser(banDiscordId, banDiscordId); banDialog = false">ç¡®è®¤æ‹‰é»‘</button>
         </div>
       </div>
     </div>
 
-    <!-- ÏÂÔØ¼ÇÂ¼ -->
+    <!-- ä¸‹è½½è®°å½• -->
     <section v-if="view === 'downloads'" class="admin-card">
       <div class="list-toolbar">
-        <h2>ÏÂÔØ¼ÇÂ¼</h2>
-        <button class="btn-outline" @click="view = 'list'">¡û ·µ»ØÁĞ±í</button>
+        <h2>ä¸‹è½½è®°å½•</h2>
+        <button class="btn-outline" @click="view = 'list'">â† è¿”å›åˆ—è¡¨</button>
       </div>
       <div class="filter-row">
-        <input v-model="dlUserFilter" placeholder="°´ÓÃ»§IDÉ¸Ñ¡..." class="filter-input" @input="debounceFetchDownloads" />
-        <input v-model="dlBatchFilter" placeholder="°´Åú´ÎIDÉ¸Ñ¡..." class="filter-input" @input="debounceFetchDownloads" />
+        <input v-model="dlUserFilter" placeholder="æŒ‰ç”¨æˆ·IDç­›é€‰..." class="filter-input" @input="debounceFetchDownloads" />
+        <input v-model="dlBatchFilter" placeholder="æŒ‰æ‰¹æ¬¡IDç­›é€‰..." class="filter-input" @input="debounceFetchDownloads" />
       </div>
-      <div v-if="dlLoading" class="admin-placeholder">¼ÓÔØÖĞ...</div>
+      <div v-if="dlLoading" class="admin-placeholder">åŠ è½½ä¸­...</div>
       <p v-else-if="downloadsError" class="status-error">{{ downloadsError }}</p>
-      <div v-else-if="!downloads.length" class="empty-state"><p>ÔİÎŞ¼ÇÂ¼</p></div>
+      <div v-else-if="!downloads.length" class="empty-state"><p>æš‚æ— è®°å½•</p></div>
       <table v-else class="data-table">
         <thead>
-          <tr><th>ÓÃ»§</th><th>Í¼Æ¬</th><th>Åú´Î</th><th>ÀàĞÍ</th><th>Ê±¼ä</th></tr>
+          <tr><th>ç”¨æˆ·</th><th>å›¾ç‰‡</th><th>æ‰¹æ¬¡</th><th>ç±»å‹</th><th>æ—¶é—´</th></tr>
         </thead>
         <tbody>
           <tr v-for="d in downloads" :key="d.id">
             <td><strong>{{ d.username }}</strong></td>
             <td><small>{{ d.image_id }}</small></td>
             <td>{{ d.batch_name || d.batch_id }}</td>
-            <td>{{ d.asset === 'txt' ? 'TXT' : 'Í¼Æ¬' }}</td>
+            <td>{{ d.asset === 'txt' ? 'TXT' : 'å›¾ç‰‡' }}</td>
             <td>{{ formatDate(d.timestamp || d.created_at) }}</td>
           </tr>
         </tbody>
       </table>
       <div v-if="dlTotal > downloads.length" style="text-align:center;margin-top:12px">
-        <button class="btn-outline" @click="fetchDownloads(downloads.length)">¼ÓÔØ¸ü¶à</button>
+        <button class="btn-outline" @click="fetchDownloads(downloads.length)">åŠ è½½æ›´å¤š</button>
       </div>
     </section>
 
-    <!-- Åú´ÎÉèÖÃµ¯´° -->
+    <!-- æ‰¹æ¬¡è®¾ç½®å¼¹çª— -->
     <Teleport to="body">
       <div v-if="settingsTarget" class="modal-overlay" @click.self="closeSettings">
         <div class="modal-card settings-modal">
-          <h3>Åú´ÎÉèÖÃ ¡ª {{ settingsTarget.batch_name }}</h3>
+          <h3>æ‰¹æ¬¡è®¾ç½® â€” {{ settingsTarget.batch_name }}</h3>
 
           <label class="field">
-            <span>±¸×¢</span>
-            <textarea v-model="settingsNotes" rows="3" placeholder="Åú´ÎÃèÊö¡¢²ßÕ¹ËµÃ÷..." class="settings-textarea"></textarea>
+            <span>å¤‡æ³¨</span>
+            <textarea v-model="settingsNotes" rows="3" placeholder="æ‰¹æ¬¡æè¿°ã€ç­–å±•è¯´æ˜..." class="settings-textarea"></textarea>
           </label>
 
           <label class="field">
-            <span>·âÃæÍ¼Æ¬ <small>(µã»÷Ñ¡È¡)</small></span>
+            <span>å°é¢å›¾ç‰‡ <small>(ç‚¹å‡»é€‰å–)</small></span>
           </label>
-          <p v-if="settingsLoading" class="admin-placeholder">¼ÓÔØÍ¼Æ¬ÖĞ...</p>
-          <div v-else-if="!settingsImages.length" class="admin-placeholder">´ËÅú´ÎÔİÎŞÍ¼Æ¬</div>
+          <p v-if="settingsLoading" class="admin-placeholder">åŠ è½½å›¾ç‰‡ä¸­...</p>
+          <div v-else-if="!settingsImages.length" class="admin-placeholder">æ­¤æ‰¹æ¬¡æš‚æ— å›¾ç‰‡</div>
           <div v-else class="cover-grid">
             <div
               v-for="img in settingsImages"
@@ -616,116 +623,116 @@
           </div>
 
           <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
-            <button class="btn-outline" @click="settingsCoverId = null" v-if="settingsCoverId">Çå³ı·âÃæ£¨Ê¹ÓÃÄ¬ÈÏ£©</button>
-            <button class="btn-outline" @click="resetBatchPassword(settingsTarget.batch_id)" :disabled="resetPwdLoading">{{ resetPwdLoading ? '´¦ÀíÖĞ...' : 'ÉèÖÃ/ÖØÖÃÃÜÂë' }}</button>
-            <button class="btn-outline" @click="closeSettings">È¡Ïû</button>
-            <button class="btn-primary" :disabled="settingsSaving" @click="saveSettings">{{ settingsSaving ? '±£´æÖĞ...' : '±£´æÉèÖÃ' }}</button>
+            <button class="btn-outline" @click="settingsCoverId = null" v-if="settingsCoverId">æ¸…é™¤å°é¢ï¼ˆä½¿ç”¨é»˜è®¤ï¼‰</button>
+            <button class="btn-outline" @click="resetBatchPassword(settingsTarget.batch_id)" :disabled="resetPwdLoading">{{ resetPwdLoading ? 'å¤„ç†ä¸­...' : 'è®¾ç½®/é‡ç½®å¯†ç ' }}</button>
+            <button class="btn-outline" @click="closeSettings">å–æ¶ˆ</button>
+            <button class="btn-primary" :disabled="settingsSaving" @click="saveSettings">{{ settingsSaving ? 'ä¿å­˜ä¸­...' : 'ä¿å­˜è®¾ç½®' }}</button>
           </div>
           <div v-if="newPassword" class="new-pwd-display" style="margin-top:12px;padding:8px 12px;background:var(--glass-bg);border-radius:8px">
-            ĞÂÃÜÂë£º<code style="font-size:16px;font-weight:bold">{{ newPassword }}</code>
-            <button class="btn-outline small" @click="copyToClipboard(newPassword)" style="margin-left:8px">¸´ÖÆ</button>
+            æ–°å¯†ç ï¼š<code style="font-size:16px;font-weight:bold">{{ newPassword }}</code>
+            <button class="btn-outline small" @click="copyToClipboard(newPassword)" style="margin-left:8px">å¤åˆ¶</button>
           </div>
           <p v-if="settingsError" class="status-error">{{ settingsError }}</p>
         </div>
       </div>
     </Teleport>
 
-    <!-- É¾³ıÍ¼Æ¬È·ÈÏ -->
+    <!-- åˆ é™¤å›¾ç‰‡ç¡®è®¤ -->
     <Teleport to="body">
       <div v-if="deleteImageTarget" class="modal-overlay" @click.self="deleteImageTarget = null">
         <div class="modal-card">
-          <h3>È·ÈÏÉ¾³ıÍ¼Æ¬</h3>
-          <p>{{ deleteImageTarget.prompt_preview?.slice(0, 60) || '(ÎŞÌáÊ¾´Ê)' }}</p>
-          <p class="modal-warn">´Ë²Ù×÷²»¿É³·Ïú¡£</p>
+          <h3>ç¡®è®¤åˆ é™¤å›¾ç‰‡</h3>
+          <p>{{ deleteImageTarget.prompt_preview?.slice(0, 60) || '(æ— æç¤ºè¯)' }}</p>
+          <p class="modal-warn">æ­¤æ“ä½œä¸å¯æ’¤é”€ã€‚</p>
           <div class="modal-actions">
-            <button class="btn-outline" @click="deleteImageTarget = null">È¡Ïû</button>
-            <button class="btn-danger" :disabled="deletingImage" @click="doDeleteImage">{{ deletingImage ? 'É¾³ıÖĞ...' : 'È·ÈÏÉ¾³ı' }}</button>
+            <button class="btn-outline" @click="deleteImageTarget = null">å–æ¶ˆ</button>
+            <button class="btn-danger" :disabled="deletingImage" @click="doDeleteImage">{{ deletingImage ? 'åˆ é™¤ä¸­...' : 'ç¡®è®¤åˆ é™¤' }}</button>
           </div>
           <p v-if="deleteImageError" class="status-error">{{ deleteImageError }}</p>
         </div>
       </div>
     </Teleport>
 
-    <!-- ÒÆ¶¯Í¼Æ¬·Ö×é -->
+    <!-- ç§»åŠ¨å›¾ç‰‡åˆ†ç»„ -->
     <Teleport to="body">
       <div v-if="moveImageTarget" class="modal-overlay" @click.self="moveImageTarget = null">
         <div class="modal-card">
-          <h3>ÒÆ¶¯Í¼Æ¬µ½·Ö×é</h3>
-          <p>{{ moveImageTarget.prompt_preview?.slice(0, 60) || '(ÎŞÌáÊ¾´Ê)' }}</p>
+          <h3>ç§»åŠ¨å›¾ç‰‡åˆ°åˆ†ç»„</h3>
+          <p>{{ moveImageTarget.prompt_preview?.slice(0, 60) || '(æ— æç¤ºè¯)' }}</p>
           <select v-model="moveImageToGroupId" class="move-select">
-            <option v-for="g in imageGroups" :key="g.group_id" :value="g.group_id">{{ g.title || 'Î´ÃüÃû' }}</option>
+            <option v-for="g in imageGroups" :key="g.group_id" :value="g.group_id">{{ g.title || 'æœªå‘½å' }}</option>
           </select>
           <div class="modal-actions">
-            <button class="btn-outline" @click="moveImageTarget = null">È¡Ïû</button>
-            <button class="btn-primary" :disabled="movingImage" @click="doMoveImage">{{ movingImage ? 'ÒÆ¶¯ÖĞ...' : 'È·ÈÏÒÆ¶¯' }}</button>
+            <button class="btn-outline" @click="moveImageTarget = null">å–æ¶ˆ</button>
+            <button class="btn-primary" :disabled="movingImage" @click="doMoveImage">{{ movingImage ? 'ç§»åŠ¨ä¸­...' : 'ç¡®è®¤ç§»åŠ¨' }}</button>
           </div>
           <p v-if="moveImageError" class="status-error">{{ moveImageError }}</p>
         </div>
       </div>
     </Teleport>
 
-    <!-- ÅúÁ¿ÒÆ¶¯È·ÈÏ -->
+    <!-- æ‰¹é‡ç§»åŠ¨ç¡®è®¤ -->
     <Teleport to="body">
       <div v-if="batchMoveDialog" class="modal-overlay" @click.self="batchMoveDialog = false">
         <div class="modal-card">
-          <h3>ÅúÁ¿ÒÆ¶¯ {{ imagesSelected.size }} ÕÅÍ¼Æ¬</h3>
+          <h3>æ‰¹é‡ç§»åŠ¨ {{ imagesSelected.size }} å¼ å›¾ç‰‡</h3>
           <select v-model="moveImageToGroupId" class="move-select">
-            <option v-for="g in imageGroups" :key="g.group_id" :value="g.group_id">{{ g.title || 'Î´ÃüÃû' }}</option>
+            <option v-for="g in imageGroups" :key="g.group_id" :value="g.group_id">{{ g.title || 'æœªå‘½å' }}</option>
           </select>
           <div class="modal-actions">
-            <button class="btn-outline" @click="batchMoveDialog = false">È¡Ïû</button>
-            <button class="btn-primary" :disabled="movingImage" @click="doBatchMove">{{ movingImage ? 'ÒÆ¶¯ÖĞ...' : 'È·ÈÏÒÆ¶¯' }}</button>
+            <button class="btn-outline" @click="batchMoveDialog = false">å–æ¶ˆ</button>
+            <button class="btn-primary" :disabled="movingImage" @click="doBatchMove">{{ movingImage ? 'ç§»åŠ¨ä¸­...' : 'ç¡®è®¤ç§»åŠ¨' }}</button>
           </div>
           <p v-if="moveImageError" class="status-error">{{ moveImageError }}</p>
         </div>
       </div>
     </Teleport>
 
-    <!-- Ñ¹ËõÈ·ÈÏ -->
+    <!-- å‹ç¼©ç¡®è®¤ -->
     <Teleport to="body">
       <div v-if="compressTarget" class="modal-overlay" @click.self="compressTarget = null">
         <div class="modal-card">
-          <h3>Ñ¹Ëõ¹éµµ</h3>
-          <p>½«Í¼Æ¬×ªÎª JPEG (quality 90)£¬Ô­Í¼½«±»Ìæ»»¡£</p>
-          <p>{{ compressTarget.prompt_preview?.slice(0, 60) || '(ÎŞÌáÊ¾´Ê)' }}</p>
+          <h3>å‹ç¼©å½’æ¡£</h3>
+          <p>å°†å›¾ç‰‡è½¬ä¸º JPEG (quality 90)ï¼ŒåŸå›¾å°†è¢«æ›¿æ¢ã€‚</p>
+          <p>{{ compressTarget.prompt_preview?.slice(0, 60) || '(æ— æç¤ºè¯)' }}</p>
           <div class="modal-actions">
-            <button class="btn-outline" @click="compressTarget = null">È¡Ïû</button>
-            <button class="btn-primary" :disabled="compressing" @click="doCompressImage">{{ compressing ? 'Ñ¹ËõÖĞ...' : 'È·ÈÏÑ¹Ëõ' }}</button>
+            <button class="btn-outline" @click="compressTarget = null">å–æ¶ˆ</button>
+            <button class="btn-primary" :disabled="compressing" @click="doCompressImage">{{ compressing ? 'å‹ç¼©ä¸­...' : 'ç¡®è®¤å‹ç¼©' }}</button>
           </div>
           <p v-if="compressError" class="status-error">{{ compressError }}</p>
         </div>
       </div>
     </Teleport>
 
-    <!-- ÅúÁ¿Ñ¹ËõÈ·ÈÏ -->
+    <!-- æ‰¹é‡å‹ç¼©ç¡®è®¤ -->
     <Teleport to="body">
       <div v-if="batchCompressDialog" class="modal-overlay" @click.self="batchCompressDialog = false">
         <div class="modal-card">
-          <h3>ÅúÁ¿Ñ¹Ëõ {{ imagesSelected.size }} ÕÅÍ¼Æ¬</h3>
-          <p>ËùÓĞÍ¼Æ¬½«×ªÎª JPEG (quality 90)£¬Ô­Í¼½«±»Ìæ»»¡£´Ë²Ù×÷²»¿É³·Ïú¡£</p>
+          <h3>æ‰¹é‡å‹ç¼© {{ imagesSelected.size }} å¼ å›¾ç‰‡</h3>
+          <p>æ‰€æœ‰å›¾ç‰‡å°†è½¬ä¸º JPEG (quality 90)ï¼ŒåŸå›¾å°†è¢«æ›¿æ¢ã€‚æ­¤æ“ä½œä¸å¯æ’¤é”€ã€‚</p>
           <div class="modal-actions">
-            <button class="btn-outline" @click="batchCompressDialog = false">È¡Ïû</button>
-            <button class="btn-primary" :disabled="compressing" @click="doBatchCompress">{{ compressing ? 'Ñ¹ËõÖĞ...' : 'È·ÈÏÑ¹Ëõ' }}</button>
+            <button class="btn-outline" @click="batchCompressDialog = false">å–æ¶ˆ</button>
+            <button class="btn-primary" :disabled="compressing" @click="doBatchCompress">{{ compressing ? 'å‹ç¼©ä¸­...' : 'ç¡®è®¤å‹ç¼©' }}</button>
           </div>
           <p v-if="compressError" class="status-error">{{ compressError }}</p>
           <div v-if="compressProgress" class="upload-progress" style="margin-top:12px">
-            <p>Ñ¹Ëõ½ø¶È£º{{ compressProgress }}</p>
+            <p>å‹ç¼©è¿›åº¦ï¼š{{ compressProgress }}</p>
             <div class="progress-bar"><span :style="{ width: compressPct + '%' }" /></div>
           </div>
         </div>
       </div>
     </Teleport>
 
-    <!-- ÅúÁ¿É¾³ıÈ·ÈÏ -->
+    <!-- æ‰¹é‡åˆ é™¤ç¡®è®¤ -->
     <Teleport to="body">
       <div v-if="batchDeleteDialog" class="modal-overlay" @click.self="batchDeleteDialog = false">
         <div class="modal-card">
-          <h3>È·ÈÏÅúÁ¿É¾³ı</h3>
-          <p>È·¶¨ÒªÉ¾³ıÑ¡ÖĞµÄ <strong>{{ imagesSelected.size }}</strong> ÕÅÍ¼Æ¬Âğ£¿</p>
-          <p class="modal-warn">´Ë²Ù×÷²»¿É³·Ïú¡£</p>
+          <h3>ç¡®è®¤æ‰¹é‡åˆ é™¤</h3>
+          <p>ç¡®å®šè¦åˆ é™¤é€‰ä¸­çš„ <strong>{{ imagesSelected.size }}</strong> å¼ å›¾ç‰‡å—ï¼Ÿ</p>
+          <p class="modal-warn">æ­¤æ“ä½œä¸å¯æ’¤é”€ã€‚</p>
           <div class="modal-actions">
-            <button class="btn-outline" @click="batchDeleteDialog = false">È¡Ïû</button>
-            <button class="btn-danger" :disabled="deletingImage" @click="doBatchDelete">{{ deletingImage ? 'É¾³ıÖĞ...' : 'È·ÈÏÉ¾³ı' }}</button>
+            <button class="btn-outline" @click="batchDeleteDialog = false">å–æ¶ˆ</button>
+            <button class="btn-danger" :disabled="deletingImage" @click="doBatchDelete">{{ deletingImage ? 'åˆ é™¤ä¸­...' : 'ç¡®è®¤åˆ é™¤' }}</button>
           </div>
           <p v-if="deleteImageError" class="status-error">{{ deleteImageError }}</p>
         </div>
@@ -745,7 +752,7 @@ const filterWords = ref([]);
 const newFilterWord = ref("");
 const filterSaving = ref(false);
 
-// ---- Í³¼ÆÒÇ±íÅÌ ----
+// ---- ç»Ÿè®¡ä»ªè¡¨ç›˜ ----
 const stats = reactive({ total_users: 0, total_unlocks: 0, total_downloads: 0 });
 
 const users = ref([]);
@@ -758,6 +765,9 @@ const dlTotal = ref(0);
 const dlUserFilter = ref('');
 const dlBatchFilter = ref('');
 let dlDebounceTimer = null;
+const banDialog = ref(false);
+const banDiscordId = ref('');
+const banReason = ref('');
 
 async function fetchStats() {
   try {
@@ -768,7 +778,7 @@ async function fetchStats() {
   } catch { /* ignore */ }
 }
 
-// ---- Åú´ÎÁĞ±í ----
+// ---- æ‰¹æ¬¡åˆ—è¡¨ ----
 const batches = ref([]);
 const batchLoading = ref(false);
 const batchError = ref('');
@@ -784,7 +794,7 @@ async function fetchBatches() {
     const data = await apiFetch('/api/admin/batches');
     batches.value = data.batches || [];
   } catch (e) {
-    batchError.value = e.message || '¼ÓÔØÅú´ÎÊ§°Ü';
+    batchError.value = e.message || 'åŠ è½½æ‰¹æ¬¡å¤±è´¥';
   } finally {
     batchLoading.value = false;
   }
@@ -830,13 +840,13 @@ async function toggleExpandBatch(b) {
     const data = await apiFetch('/api/admin/batches/' + b.batch_id + '/activity');
     activityCache[b.batch_id] = data;
   } catch (e) {
-    activityError[b.batch_id] = e.message || '¼ÓÔØ»î¶¯¼ÇÂ¼Ê§°Ü';
+    activityError[b.batch_id] = e.message || 'åŠ è½½æ´»åŠ¨è®°å½•å¤±è´¥';
   } finally {
     activityLoading[b.batch_id] = false;
   }
 }
 
-// ======= Í¼Æ¬¹ÜÀí =======
+// ======= å›¾ç‰‡ç®¡ç† =======
 const imagesBatchId = ref('');
 const imagesBatchName = ref('');
 const imagesData = ref([]);
@@ -860,7 +870,7 @@ async function createGroup() {
     showNewGroupInput.value = false;
     fetchImageGroups();
   } catch (e) {
-    uploadError.value = e.message || '´´½¨·Ö×éÊ§°Ü';
+    uploadError.value = e.message || 'åˆ›å»ºåˆ†ç»„å¤±è´¥';
   }
 }
 
@@ -885,7 +895,7 @@ async function fetchImages() {
     imagesData.value = data.images || [];
     imagesTotal.value = data.total || 0;
   } catch (e) {
-    imagesError.value = e.message || '¼ÓÔØÍ¼Æ¬Ê§°Ü';
+    imagesError.value = e.message || 'åŠ è½½å›¾ç‰‡å¤±è´¥';
   } finally {
     imagesLoading.value = false;
   }
@@ -910,13 +920,13 @@ async function doDeleteImage() {
     await fetchImages();
     imagesSelected.value.clear();
   } catch (e) {
-    deleteImageError.value = e.message || 'É¾³ıÊ§°Ü';
+    deleteImageError.value = e.message || 'åˆ é™¤å¤±è´¥';
   } finally {
     deletingImage.value = false;
   }
 }
 
-// ---- ÒÆ¶¯Í¼Æ¬ ----
+// ---- ç§»åŠ¨å›¾ç‰‡ ----
 const moveImageTarget = ref(null);
 const moveImageToGroupId = ref('');
 const movingImage = ref(false);
@@ -935,20 +945,20 @@ async function doMoveImage() {
     moveImageTarget.value = null;
     await fetchImages();
   } catch (e) {
-    moveImageError.value = e.message || 'ÒÆ¶¯Ê§°Ü';
+    moveImageError.value = e.message || 'ç§»åŠ¨å¤±è´¥';
   } finally {
     movingImage.value = false;
   }
 }
 
-// ---- Ñ¹ËõÍ¼Æ¬ ----
+// ---- å‹ç¼©å›¾ç‰‡ ----
 const compressTarget = ref(null);
 const compressing = ref(false);
 const compressError = ref('');
 const compressProgress = ref('');
 const compressPct = ref(0);
 
-// ---- É¾³ıÍ¼Æ¬ ----
+// ---- åˆ é™¤å›¾ç‰‡ ----
 const deleteImageTarget = ref(null);
 const deletingImage = ref(false);
 const deleteImageError = ref('');
@@ -960,20 +970,20 @@ async function compressOneImage(imageId) {
     method: 'POST',
     body: JSON.stringify({ image_id: imageId, asset: 'image' }),
   });
-  if (!dlResp.url) throw new Error('»ñÈ¡ÏÂÔØÁ´½ÓÊ§°Ü');
+  if (!dlResp.url) throw new Error('è·å–ä¸‹è½½é“¾æ¥å¤±è´¥');
   const res = await fetch(dlResp.url);
-  if (!res.ok) throw new Error('ÏÂÔØÔ­Í¼Ê§°Ü');
+  if (!res.ok) throw new Error('ä¸‹è½½åŸå›¾å¤±è´¥');
   const blob = await res.blob();
   const jpeg = await compressToJpeg(blob);
-  if (!jpeg) throw new Error('Ñ¹ËõÊ§°Ü');
+  if (!jpeg) throw new Error('å‹ç¼©å¤±è´¥');
   const signResp = await apiFetch('/api/admin/uploads/sign', {
     method: 'POST',
     body: JSON.stringify({ batch_id: imagesBatchId.value, files: [{ image_id: imageId, kind: 'original', content_type: 'image/jpeg' }] }),
   });
   const slot = signResp.uploads?.[0];
-  if (!slot?.url) throw new Error('Ç©ÃûÊ§°Ü');
+  if (!slot?.url) throw new Error('ç­¾åå¤±è´¥');
   const putRes = await fetch(slot.url, { method: 'PUT', body: jpeg.blob, headers: { 'Content-Type': 'image/jpeg' }, credentials: 'omit' });
-  if (!putRes.ok) throw new Error('ÉÏ´« JPEG Ê§°Ü');
+  if (!putRes.ok) throw new Error('ä¸Šä¼  JPEG å¤±è´¥');
   await apiFetch('/api/admin/images/' + imageId, {
     method: 'PATCH',
     body: JSON.stringify({ r2_key: slot.key, preview_r2_key: slot.key, width: jpeg.width, height: jpeg.height }),
@@ -989,13 +999,13 @@ async function doCompressImage() {
     compressTarget.value = null;
     await fetchImages();
   } catch (e) {
-    compressError.value = e.message || 'Ñ¹ËõÊ§°Ü';
+    compressError.value = e.message || 'å‹ç¼©å¤±è´¥';
   } finally {
     compressing.value = false;
   }
 }
 
-// ---- ÅúÁ¿²Ù×÷ ----
+// ---- æ‰¹é‡æ“ä½œ ----
 const batchMoveDialog = ref(false);
 const batchCompressDialog = ref(false);
 const batchDeleteDialog = ref(false);
@@ -1014,7 +1024,7 @@ async function doBatchMove() {
     imagesSelected.value.clear();
     await fetchImages();
   } catch (e) {
-    moveImageError.value = e.message || 'ÅúÁ¿ÒÆ¶¯Ê§°Ü';
+    moveImageError.value = e.message || 'æ‰¹é‡ç§»åŠ¨å¤±è´¥';
   } finally {
     movingImage.value = false;
   }
@@ -1039,7 +1049,7 @@ async function doBatchCompress() {
     imagesSelected.value.clear();
     await fetchImages();
   } catch (e) {
-    compressError.value = e.message || 'ÅúÁ¿Ñ¹ËõÊ§°Ü';
+    compressError.value = e.message || 'æ‰¹é‡å‹ç¼©å¤±è´¥';
   } finally {
     compressing.value = false;
   }
@@ -1062,13 +1072,13 @@ async function doBatchDelete() {
     imagesSelected.value.clear();
     await fetchImages();
   } catch (e) {
-    deleteImageError.value = e.message || 'ÅúÁ¿É¾³ıÊ§°Ü';
+    deleteImageError.value = e.message || 'æ‰¹é‡åˆ é™¤å¤±è´¥';
   } finally {
     deletingImage.value = false;
   }
 }
 
-// ---- É¾³ıÅú´Î ----
+// ---- åˆ é™¤æ‰¹æ¬¡ ----
 const deleteTarget = ref(null);
 const deleting = ref(false);
 const deleteError = ref('');
@@ -1089,13 +1099,13 @@ async function doDeleteBatch() {
     expandedBatch.value = null;
     await fetchStats();
   } catch (e) {
-    deleteError.value = e.message || 'É¾³ıÊ§°Ü';
+    deleteError.value = e.message || 'åˆ é™¤å¤±è´¥';
   } finally {
     deleting.value = false;
   }
 }
 
-// ---- Åú´ÎÉèÖÃ ---- 
+// ---- æ‰¹æ¬¡è®¾ç½® ---- 
 const settingsTarget = ref(null);
 const settingsImages = ref([]);
 const settingsLoading = ref(false);
@@ -1119,7 +1129,7 @@ async function openSettings(b) {
       preview_url: '/api/admin/preview/' + encodeURIComponent(img.image_id) + '?batch_id=' + encodeURIComponent(b.batch_id),
     }));
   } catch (e) {
-    settingsError.value = e.message || '¼ÓÔØÍ¼Æ¬Ê§°Ü';
+    settingsError.value = e.message || 'åŠ è½½å›¾ç‰‡å¤±è´¥';
   } finally {
     settingsLoading.value = false;
   }
@@ -1149,13 +1159,13 @@ async function saveSettings() {
     }
     closeSettings();
   } catch (e) {
-    settingsError.value = e.message || '±£´æÊ§°Ü';
+    settingsError.value = e.message || 'ä¿å­˜å¤±è´¥';
   } finally {
     settingsSaving.value = false;
   }
 }
 
-// ---- ¹«¸æ¹ÜÀí ----
+// ---- å…¬å‘Šç®¡ç† ----
 const allAnnouncements = ref([]);
 const editingAnnouncement = ref(false);
 const announceForm = ref({ id: null, title: '', content: '', image_url: '' });
@@ -1207,7 +1217,7 @@ async function saveAnnouncement() {
     cancelEditAnnouncement();
     await fetchAllAnnouncements();
   } catch (e) {
-    announceError.value = e.message || '±£´æÊ§°Ü';
+    announceError.value = e.message || 'ä¿å­˜å¤±è´¥';
   } finally {
     announceSaving.value = false;
   }
@@ -1239,7 +1249,7 @@ async function moveAnnouncement(a, delta) {
 }
 
 async function deleteAnnouncement(a) {
-  if (!confirm('È·¶¨ÒªÉ¾³ı¹«¸æ¡¸' + a.title + '¡¹Âğ£¿')) return;
+  if (!confirm('ç¡®å®šè¦åˆ é™¤å…¬å‘Šã€Œ' + a.title + 'ã€å—ï¼Ÿ')) return;
   try {
     await apiFetch('/api/admin/announcements/' + a.id, { method: 'DELETE' });
     allAnnouncements.value = allAnnouncements.value.filter((x) => x.id !== a.id);
@@ -1248,7 +1258,7 @@ async function deleteAnnouncement(a) {
   }
 }
 
-// ---- ĞûÊÄÎÄ±¾ ----
+// ---- å®£èª“æ–‡æœ¬ ----
 const pledgeTextAdmin = ref('');
 const pledgeSaving = ref(false);
 
@@ -1274,7 +1284,7 @@ async function savePledgeText() {
 }
 
 
-// ---- ·´À¡²é¿´ ----
+// ---- åé¦ˆæŸ¥çœ‹ ----
 const feedbacks = ref([]);
 const feedbackLoading = ref(false);
 const feedbackTotal = ref(0);
@@ -1300,7 +1310,7 @@ async function openFeedbacks() {
 }
 
 async function deleteFeedback(f) {
-  if (!confirm('È·¶¨ÒªÉ¾³ıÕâÌõ·´À¡Âğ£¿')) return;
+  if (!confirm('ç¡®å®šè¦åˆ é™¤è¿™æ¡åé¦ˆå—ï¼Ÿ')) return;
   try {
     await apiFetch('/api/admin/feedbacks/' + f.id, { method: 'DELETE' });
     feedbacks.value = feedbacks.value.filter(x => x.id !== f.id);
@@ -1311,7 +1321,7 @@ async function deleteFeedback(f) {
 }
 
 
-// ---- ¹ıÂË´Ê ----
+// ---- è¿‡æ»¤è¯ ----
 function addFilterWord() {
   const w = newFilterWord.value.trim();
   if (!w || filterWords.value.includes(w)) { newFilterWord.value = ""; return; }
@@ -1350,7 +1360,7 @@ function openFilterWords() {
   fetchFilterWords();
 }
 
-// ---- ĞÂ½¨Åú´Î ----
+// ---- æ–°å»ºæ‰¹æ¬¡ ----
 const createForm = ref({ batch_name: '', batch_id: '', expire_at: '' });
 const creating = ref(false);
 const createError = ref('');
@@ -1370,7 +1380,7 @@ async function createBatch() {
     batches.value.unshift({ batch_id: data.batch_id, batch_name: data.batch_name, is_active: 0, image_count: 0, group_count: 0, unlock_count: 0, download_count: 0, created_at: new Date().toISOString(), expire_at: body.expire_at || null });
     createdPassword.value = data.password;
   } catch (e) {
-    createError.value = e.message || '´´½¨Ê§°Ü';
+    createError.value = e.message || 'åˆ›å»ºå¤±è´¥';
   } finally {
     creating.value = false;
   }
@@ -1388,7 +1398,7 @@ function goUploadCreated() {
   view.value = 'upload';
 }
 
-// ---- ÉÏ´« ----
+// ---- ä¸Šä¼  ----
 const uploadFormat = ref('png');
 const uploadBatchId = ref('');
 const uploadBatchName = ref('');
@@ -1433,7 +1443,7 @@ async function handleFiles(fileList) {
     groups.value = plan.groups;
     plan.entries.forEach((e) => makeThumbnail(e).catch(() => null));
   } catch (e) {
-    uploadError.value = e.message || '½âÎöÊ§°Ü';
+    uploadError.value = e.message || 'è§£æå¤±è´¥';
   } finally {
     parsing.value = false;
   }
@@ -1458,7 +1468,7 @@ function addGroup() {
     groupKey: 'manual-' + crypto.randomUUID(),
     positive_prompt: '',
     negative_prompt: '',
-    title: '·Ö×é ' + (groups.value.length + 1),
+    title: 'åˆ†ç»„ ' + (groups.value.length + 1),
     notes: '',
     imageIds: [],
   });
@@ -1480,7 +1490,7 @@ function deleteGroup(g) {
   }
   let ungrouped = groups.value.find((x) => x.id === '__ungrouped__');
   if (!ungrouped) {
-    ungrouped = { id: '__ungrouped__', groupKey: '__ungrouped__', positive_prompt: '', negative_prompt: '', title: 'Î´·Ö×é', imageIds: [] };
+    ungrouped = { id: '__ungrouped__', groupKey: '__ungrouped__', positive_prompt: '', negative_prompt: '', title: 'æœªåˆ†ç»„', imageIds: [] };
     groups.value.unshift(ungrouped);
   }
   groups.value = groups.value.filter((x) => x.id !== g.id);
@@ -1494,11 +1504,11 @@ function onProgress(d, t, ph) {
 }
 
 const phaseLabel = computed(() => ({
-  sign: 'ÕıÔÚ»ñÈ¡ÉÏ´«µØÖ·...',
-  put: 'ÕıÔÚÉÏ´«µ½ R2£¨' + done.value + '/' + total.value + '£©',
-  complete: 'ÕıÔÚÌá½»Çåµ¥...',
-  limit: '¼ì²éÎÄ¼şÊı...',
-}[phase.value] || '´¦ÀíÖĞ...'));
+  sign: 'æ­£åœ¨è·å–ä¸Šä¼ åœ°å€...',
+  put: 'æ­£åœ¨ä¸Šä¼ åˆ° R2ï¼ˆ' + done.value + '/' + total.value + 'ï¼‰',
+  complete: 'æ­£åœ¨æäº¤æ¸…å•...',
+  limit: 'æ£€æŸ¥æ–‡ä»¶æ•°...',
+}[phase.value] || 'å¤„ç†ä¸­...'));
 
 const pct = computed(() => {
   if (phase.value === 'put' && total.value) return Math.round((done.value / total.value) * 100);
@@ -1508,7 +1518,7 @@ const pct = computed(() => {
 
 async function submitUpload() {
   if (totalFiles.value > SIGN_FILE_LIMIT) {
-    uploadError.value = 'ÎÄ¼şÊı (' + totalFiles.value + ') ³¬¹ıµ¥ÅúÉÏÏŞ ' + SIGN_FILE_LIMIT;
+    uploadError.value = 'æ–‡ä»¶æ•° (' + totalFiles.value + ') è¶…è¿‡å•æ‰¹ä¸Šé™ ' + SIGN_FILE_LIMIT;
     return;
   }
   uploading.value = true;
@@ -1523,7 +1533,7 @@ async function submitUpload() {
     expandedId.value = null;
     await backToList();
   } catch (e) {
-    uploadError.value = e.message || 'ÉÏ´«Ê§°Ü';
+    uploadError.value = e.message || 'ä¸Šä¼ å¤±è´¥';
   } finally {
     uploading.value = false;
     phase.value = '';
@@ -1553,40 +1563,33 @@ function onDocClick(e) {
   }
 }
 
-// ---- À­ºÚ ----
-const banDialog = ref(false);
-const banDiscordId = ref('');
-const banReason = ref('');
-function openBanDialog() { banDialog.value = true; banDiscordId.value = ''; banReason.value = ''; }
+// ---- æ‹‰é»‘ç®¡ç† ----
+function openBanDialog() {
+  banDiscordId.value = '';
+  banReason.value = '';
+  banDialog.value = true;
+}
 async function banUser(discordId, username) {
-  let id = discordId;
-  let reason = '';
-  if (!id) {
-    id = banDiscordId.value.trim();
-    reason = banReason.value.trim();
-    if (!id) return;
-  } else {
-    reason = prompt('À­ºÚÔ­Òò£¨¿ÉÑ¡£©£º');
-    if (reason === null) return;
-  }
+  if (!confirm('ç¡®å®šè¦æ‹‰é»‘ç”¨æˆ· ' + username + ' å—ï¼Ÿ')) return;
   try {
-    await apiFetch('/api/admin/users/ban', { method: 'POST', body: JSON.stringify({ discord_id: id, reason }) });
-    banDialog.value = false;
-    const u = users.value.find(x => x.discord_id === id);
-    if (u) u.is_banned = 1;
-    else fetchUsers();
-  } catch (e) {}
+    await apiFetch('/api/admin/users/ban', {
+      method: 'POST',
+      body: JSON.stringify({ discord_id: discordId, reason: '' })
+    });
+    const u = users.value.find(x => x.discord_id === discordId);
+    if (u) u.is_banned = true;
+  } catch (e) { /* toast handled by apiFetch */ }
 }
 async function unbanUser(discordId, username) {
-  if (!confirm('È·¶¨½â³ı ' + (username || discordId) + ' µÄÀ­ºÚ£¿')) return;
+  if (!confirm('ç¡®å®šè¦è§£å°ç”¨æˆ· ' + username + ' å—ï¼Ÿ')) return;
   try {
     await apiFetch('/api/admin/users/ban?discord_id=' + encodeURIComponent(discordId), { method: 'DELETE' });
     const u = users.value.find(x => x.discord_id === discordId);
-    if (u) u.is_banned = 0;
-  } catch (e) {}
+    if (u) u.is_banned = false;
+  } catch (e) { /* toast handled by apiFetch */ }
 }
 
-// ---- ÓÃ»§¹ÜÀí ----
+// ---- ç”¨æˆ·ç®¡ç† ----
 function openUsers() { view.value = 'users'; fetchUsers(); }
 async function fetchUsers() {
   usersLoading.value = true;
@@ -1596,13 +1599,13 @@ async function fetchUsers() {
     users.value = data.users || [];
   } catch (e) {
     users.value = [];
-    usersError.value = e.message || 'ÓÃ»§ÁĞ±í¼ÓÔØÊ§°Ü';
+    usersError.value = e.message || 'ç”¨æˆ·åˆ—è¡¨åŠ è½½å¤±è´¥';
   } finally {
     usersLoading.value = false;
   }
 }
 async function promoteUser(discordId) {
-  if (!confirm('È·¶¨½«¸ÃÓÃ»§ÌáÉıÎª¹ÜÀíÔ±£¿')) return;
+  if (!confirm('ç¡®å®šå°†è¯¥ç”¨æˆ·æå‡ä¸ºç®¡ç†å‘˜ï¼Ÿ')) return;
   try {
     await apiFetch('/api/admin/users/' + discordId, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) });
     const u = users.value.find(x => x.discord_id === discordId);
@@ -1610,7 +1613,7 @@ async function promoteUser(discordId) {
   } catch (e) { /* toast handled by apiFetch */ }
 }
 async function demoteUser(discordId) {
-  if (!confirm('È·¶¨½«¸ÃÓÃ»§½µ¼¶ÎªÆÕÍ¨ÓÃ»§£¿')) return;
+  if (!confirm('ç¡®å®šå°†è¯¥ç”¨æˆ·é™çº§ä¸ºæ™®é€šç”¨æˆ·ï¼Ÿ')) return;
   try {
     await apiFetch('/api/admin/users/' + discordId, { method: 'PATCH', body: JSON.stringify({ role: 'user' }) });
     const u = users.value.find(x => x.discord_id === discordId);
@@ -1618,7 +1621,7 @@ async function demoteUser(discordId) {
   } catch (e) { /* toast handled by apiFetch */ }
 }
 
-// ---- ÏÂÔØ¼ÇÂ¼ ----
+// ---- ä¸‹è½½è®°å½• ----
 function openDownloads() { view.value = 'downloads'; downloads.value = []; dlTotal.value = 0; fetchDownloads(0); }
 async function fetchDownloads(offset = 0) {
   dlLoading.value = true;
@@ -1633,7 +1636,7 @@ async function fetchDownloads(offset = 0) {
     dlTotal.value = data.total || downloads.value.length;
   } catch (e) {
     if (offset === 0) downloads.value = [];
-    if (offset === 0) downloadsError.value = e.message || 'ÏÂÔØ¼ÇÂ¼¼ÓÔØÊ§°Ü';
+    if (offset === 0) downloadsError.value = e.message || 'ä¸‹è½½è®°å½•åŠ è½½å¤±è´¥';
   } finally {
     dlLoading.value = false;
   }
@@ -1643,15 +1646,15 @@ function debounceFetchDownloads() {
   dlDebounceTimer = setTimeout(() => { downloads.value = []; dlTotal.value = 0; fetchDownloads(0); }, 400);
 }
 
-// ---- ÖØÖÃÃÜÂë ----
+// ---- é‡ç½®å¯†ç  ----
 async function resetBatchPassword(batchId) {
-  const customPassword = window.prompt('ÇëÊäÈëĞÂÃÜÂë£¨Áô¿ÕÔò×Ô¶¯Éú³ÉËæ»úÃÜÂë£©£º');
+  const customPassword = window.prompt('è¯·è¾“å…¥æ–°å¯†ç ï¼ˆç•™ç©ºåˆ™è‡ªåŠ¨ç”Ÿæˆéšæœºå¯†ç ï¼‰ï¼š');
   if (customPassword === null) return;
   if (customPassword.trim().length > 128) {
-    settingsError.value = 'ÃÜÂë²»ÄÜ³¬¹ı 128 ¸ö×Ö·û';
+    settingsError.value = 'å¯†ç ä¸èƒ½è¶…è¿‡ 128 ä¸ªå­—ç¬¦';
     return;
   }
-  if (!confirm('È·¶¨ÒªÉèÖÃĞÂÃÜÂëÂğ£¿¾ÉÃÜÂë½«Á¢¼´Ê§Ğ§¡£')) return;
+  if (!confirm('ç¡®å®šè¦è®¾ç½®æ–°å¯†ç å—ï¼Ÿæ—§å¯†ç å°†ç«‹å³å¤±æ•ˆã€‚')) return;
   resetPwdLoading.value = true;
   newPassword.value = '';
   try {
@@ -1696,7 +1699,7 @@ function copyToClipboard(text) {
 .admin-header h1 { font-size: 32px; font-weight: 300; letter-spacing: 4px; margin-bottom: 8px; }
 .admin-header p { font-size: 14px; opacity: 0.6; letter-spacing: 1px; }
 
-/* Í³¼ÆÒÇ±íÅÌ */
+/* ç»Ÿè®¡ä»ªè¡¨ç›˜ */
 .stats-dash {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;
 }
@@ -1711,7 +1714,7 @@ function copyToClipboard(text) {
 .list-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
 .list-toolbar h2 { font-size: 18px; font-weight: 500; margin: 0; }
 
-/* ÊÖ»ú¶Ë£º¸ü¶àÏÂÀ­²Ëµ¥ */
+/* æ‰‹æœºç«¯ï¼šæ›´å¤šä¸‹æ‹‰èœå• */
 .toolbar-actions { display: none; align-items: center; gap: 8px; position: relative; }
 .toolbar-desktop-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
@@ -1752,7 +1755,7 @@ function copyToClipboard(text) {
 .empty-state { text-align: center; padding: 40px 0; display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .empty-state p { font-size: 14px; opacity: 0.5; letter-spacing: 2px; }
 
-/* Åú´ÎÁĞ±í */
+/* æ‰¹æ¬¡åˆ—è¡¨ */
 .batch-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
 .batch-row-wrap { border-radius: var(--radius-sm); border: 1px solid var(--glass-border); background: rgba(255,255,255,0.04); overflow: hidden; }
 .batch-row {
@@ -1764,7 +1767,7 @@ function copyToClipboard(text) {
 .batch-date { font-size: 11px; opacity: 0.5; }
 .batch-actions { display: flex; align-items: center; gap: 8px; }
 
-/* Õ¹¿ª»î¶¯ */
+/* å±•å¼€æ´»åŠ¨ */
 .batch-activity { padding: 16px; border-top: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); }
 .activity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .activity-col h4 { font-size: 13px; font-weight: 500; opacity: 0.7; margin-bottom: 8px; letter-spacing: 1px; }
@@ -1787,7 +1790,7 @@ function copyToClipboard(text) {
 .icon-btn.danger:hover { background: rgba(192,57,43,0.2); border-color: #c0392b; color: #c0392b; }
 .icon-btn.danger svg { stroke: currentColor; }
 
-/* ĞÂ½¨±íµ¥ */
+/* æ–°å»ºè¡¨å• */
 .create-form { display: flex; flex-direction: column; gap: 16px; max-width: 420px; }
 .field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 .field input { padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--glass-border); background: transparent; color: var(--text); }
@@ -1815,7 +1818,7 @@ function copyToClipboard(text) {
 .password-code { font-family: monospace; font-size: 18px; padding: 12px 16px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px dashed var(--glass-border); word-break: break-all; }
 .password-actions { display: flex; gap: 10px; }
 
-/* ÉÏ´« */
+/* ä¸Šä¼  */
 .upload-target { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; font-size: 14px; }
 .upload-target strong { font-weight: 500; }
 
@@ -1858,7 +1861,7 @@ function copyToClipboard(text) {
 .progress-bar { height: 6px; border-radius: 3px; background: var(--glass-border); overflow: hidden; margin-top: 8px; }
 .progress-bar span { display: block; height: 100%; background: var(--secondary); transition: width 0.3s; }
 
-/* É¾³ıÈ·ÈÏµ¯´° */
+/* åˆ é™¤ç¡®è®¤å¼¹çª— */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 1000;
   background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
@@ -1882,7 +1885,7 @@ function copyToClipboard(text) {
 .cover-thumb img { width: 100%; height: 120px; object-fit: cover; display: block; }
 .cover-thumb.selected { border-color: var(--secondary); }
 .cover-thumb:hover { border-color: var(--glass-border); }
-/* ====== Í¼Æ¬¹ÜÀíÊÓÍ¼ ====== */
+/* ====== å›¾ç‰‡ç®¡ç†è§†å›¾ ====== */
 .images-shell { padding: 24px 0 24px 24px; }
 .images-layout { display: flex; gap: 24px; min-height: 400px; }
 .images-sidebar { width: 180px; flex-shrink: 0; }
@@ -1910,7 +1913,7 @@ function copyToClipboard(text) {
 .image-card-info { padding: 8px; }
 .image-card-prompt { font-size: 11px; opacity: 0.8; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
 .image-card-meta { font-size: 10px; opacity: 0.5; display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
-.image-card-meta span + span::before { content: '¡¤'; margin-right: 4px; }
+.image-card-meta span + span::before { content: 'Â·'; margin-right: 4px; }
 .image-card-group { font-size: 10px; opacity: 0.5; font-style: italic; }
 .image-card-actions { display: flex; gap: 4px; padding: 0 8px 8px; }
 
@@ -1918,7 +1921,7 @@ function copyToClipboard(text) {
 .images-pager button { padding: 6px 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text); cursor: pointer; font-size: 13px; }
 .images-pager button:disabled { opacity: 0.3; cursor: not-allowed; }
 
-/* ÉÏ´«¸ñÊ½Ñ¡Ôñ */
+/* ä¸Šä¼ æ ¼å¼é€‰æ‹© */
 .upload-format-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
 .format-label { font-size: 13px; opacity: 0.7; }
 .format-opt { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
@@ -1943,7 +1946,7 @@ function copyToClipboard(text) {
   .toolbar-desktop-actions { display: none; }
 }
 
-/* ¹«¸æ¹ÜÀí */
+/* å…¬å‘Šç®¡ç† */
 .pledge-editor {
   margin-top: 32px;
   padding-top: 24px;
@@ -1951,7 +1954,7 @@ function copyToClipboard(text) {
 }
 .pledge-editor h3 { font-size: 16px; margin-bottom: 8px; }
 .pledge-hint { font-size: 12px; opacity: 0.5; margin-bottom: 12px; }
-/* ĞÂ½¨·Ö×é */
+/* æ–°å»ºåˆ†ç»„ */
 .new-group-zone { margin-top: 12px; }
 .new-group-form { display: flex; gap: 6px; align-items: center; }
 .new-group-input { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--glass-border); background: transparent; color: var(--text); font-size: 12px; }
@@ -1962,33 +1965,30 @@ function copyToClipboard(text) {
 .tag-remove { background: none; border: none; color: var(--text-secondary, rgba(255,255,255,0.5)); cursor: pointer; font-size: 16px; line-height: 1; padding: 0; margin-left: 2px; }
 .tag-remove:hover { color: #ff6b6b; }
 
-/* Êı¾İ±í¸ñ (ÓÃ»§¹ÜÀí/ÏÂÔØ¼ÇÂ¼) */
+/* æ•°æ®è¡¨æ ¼ (ç”¨æˆ·ç®¡ç†/ä¸‹è½½è®°å½•) */
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .data-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--glass-border); opacity: 0.6; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
 .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--glass-border); vertical-align: middle; }
 .data-table tr:hover td { background: rgba(255,255,255,0.03); }
 .data-table small { font-size: 11px; opacity: 0.5; }
 
-/* ½ÇÉ«±êÇ© */
+/* è§’è‰²æ ‡ç­¾ */
 .role-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
 .role-badge.admin { background: rgba(192,57,43,0.2); color: #e74c3c; }
 .role-badge.user { background: rgba(255,255,255,0.08); color: var(--text); opacity: 0.7; }
-.role-badge.banned { background: rgba(231,76,60,0.15); color: #e74c3c; }
-.status-ok { color: #27ae60; font-size: 11px; font-weight: 600; }
-.btn-danger { color: #e74c3c; border-color: rgba(231,76,60,0.3); }
-.btn-danger:hover { background: rgba(231,76,60,0.15); border-color: #e74c3c; }
-.action-cell { display: flex; gap: 4px; flex-wrap: wrap; }
+.role-badge.banned { background: rgba(231,76,60,0.2); color: #e74c3c; }
+.action-cell { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
 
-/* É¸Ñ¡ĞĞ */
+/* ç­›é€‰è¡Œ */
 .filter-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .filter-input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text); font-size: 12px; flex: 1; min-width: 160px; font-family: inherit; }
 .filter-input:focus { outline: none; border-color: var(--secondary); }
 .filter-input::placeholder { opacity: 0.4; }
 
-/* ĞÂÃÜÂëÏÔÊ¾ */
+/* æ–°å¯†ç æ˜¾ç¤º */
 .new-pwd-display { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--glass-bg); border-radius: 10px; border: 1px solid var(--glass-border); font-size: 13px; }
 .new-pwd-display code { font-size: 15px; font-weight: bold; letter-spacing: 1px; color: var(--accent, #c6a76c); }
 
-/* Ğ¡ºÅ°´Å¥±äÌå */
+/* å°å·æŒ‰é’®å˜ä½“ */
 .btn-outline.small { padding: 4px 12px; font-size: 12px; border-radius: 12px; }
 </style>
