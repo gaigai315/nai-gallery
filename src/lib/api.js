@@ -38,28 +38,35 @@ export async function apiFetch(url, options = {}) {
     throw new ApiError("Network error", "network_error", 0);
   }
 
-  let data = null;
-  // 先看 Content-Type 再决定解析方式：避免把 HTML 错误页 / SPA 兜底页
-  // 误报成笼统的“JSON 解析失败”，而是给出真实状态码和响应类型。
-  const contentType = res.headers.get("content-type") || "";
-  const isJsonType = contentType.includes("json");
+  let data;
+  const contentType = (res.headers.get("content-type") || "").toLowerCase();
+  const isJson = contentType.includes("application/json");
 
-  if (isJsonType || !contentType) {
+  if (isJson) {
     try {
       data = await res.json();
     } catch {
-      data = null; // 声明是 JSON 但解析失败，或没有 Content-Type 但体不是 JSON
+      // JSON content-type declared but parsing failed – grab text for diagnostics
+      let bodySnippet = "";
+      try { bodySnippet = (await res.text()).slice(0, 200); } catch {}
+      throw new ApiError(
+        bodySnippet ? `Invalid JSON: ${bodySnippet}` : "Invalid JSON response",
+        "parse_error",
+        res.status,
+      );
     }
-  }
-
-  if (data === null) {
-    // 非 JSON 响应（SPA 兜底 HTML、Cloudflare 错误页、限流挑战页等）
-    const reason = isJsonType
-      ? "JSON 解析失败"
-      : `返回了非 JSON 内容 (${contentType || "无 Content-Type"})`;
-    const msg = `请求异常 (HTTP ${res.status}, ${reason})`;
-    if (!silent) addToast(msg, "error");
-    throw new ApiError(msg, "parse_error", res.status);
+  } else {
+    // Non-JSON response (e.g. HTML error page, plain text)
+    let body = "";
+    try { body = await res.text(); } catch {}
+    if (!silent) {
+      addToast(`服务器错误 (${res.status})`, "error");
+    }
+    throw new ApiError(
+      body ? `Server error (${res.status}): ${body.slice(0, 200)}` : `Server error (${res.status})`,
+      `http_${res.status}`,
+      res.status,
+    );
   }
 
   if (!res.ok) {
