@@ -1801,8 +1801,7 @@ function copyToClipboard(text) {
   transition: opacity 0.3s;
 }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-outline, a.btn-outline {
-  display: inline-block; text-decoration: none;
+.btn-outline {
   padding: 8px 18px; border-radius: 18px; border: 1px solid var(--glass-border);
   background: var(--glass-bg); color: var(--text); cursor: pointer; font-size: 13px; letter-spacing: 1px;
   transition: background 0.3s;
