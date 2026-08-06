@@ -60,6 +60,14 @@ export async function requireSession(request, env) {
   if (!session) {
     return { response: json({ error: "login_required" }, 401) };
   }
+  // À­ºÚ¼ì²â
+  try {
+    const banned = await env.DB.prepare('SELECT discord_id FROM banned_users WHERE discord_id = ?')
+      .bind(session.discord_id).first();
+    if (banned) {
+      return { response: json({ error: 'user_banned' }, 403) };
+    }
+  } catch {}
   return { session };
 }
 
