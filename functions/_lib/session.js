@@ -65,11 +65,7 @@ export async function requireSession(request, env) {
     const banned = await env.DB.prepare('SELECT discord_id FROM banned_users WHERE discord_id = ?')
       .bind(session.discord_id).first();
     if (banned) {
-      const adminCheck = await env.DB.prepare("SELECT role FROM users WHERE discord_id = ? AND role = 'admin'")
-        .bind(session.discord_id).first();
-      if (!adminCheck) {
-        return { response: json({ error: 'user_banned' }, 403) };
-      }
+      return { response: json({ error: 'user_banned' }, 403) };
     }
   } catch {}
   return { session };
