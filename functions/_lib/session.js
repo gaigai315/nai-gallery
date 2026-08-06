@@ -60,9 +60,10 @@ export async function requireSession(request, env) {
   if (!session) {
     return { response: json({ error: "login_required" }, 401) };
   }
-  const blocked = await env.DB.prepare("SELECT 1 AS blocked FROM blacklist WHERE discord_id = ? LIMIT 1")
+ const blocked = await env.DB.prepare("SELECT 1 AS blocked FROM blacklist WHERE discord_id = ? LIMIT 1")
     .bind(session.discord_id)
-    .first();
+    .first()
+    .catch(() => null);
   if (blocked) return { response: json({ error: "blacklisted" }, 403) };
   return { session };
 }
