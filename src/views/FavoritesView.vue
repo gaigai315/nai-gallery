@@ -1,6 +1,10 @@
 ﻿<template>
-  <div id="favorites-view" class="view-container active">
-    <h2 class="fv-title">My Favorites</h2>
+ <div id="favorites-view" class="view-container active">
+   <router-link to="/gallery" class="fv-back" title="返回画廊">
+     <svg viewBox="0 0 24 24"><path d="M19 12H5m7-7l-7 7 7 7"/></svg>
+     <span>返回画廊</span>
+   </router-link>
+   <h2 class="fv-title">My Favorites</h2>
 
     <div v-if="loading" class="fv-status">
       <div class="skeleton-strip"></div>
@@ -72,6 +76,27 @@ onMounted(fetchFavorites);
   margin: 0 auto;
   padding-left: 24px;
   padding-right: 24px;
+}
+
+.fv-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  opacity: 0.5;
+  text-decoration: none;
+  font-size: 13px;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  transition: opacity 0.3s;
+}
+.fv-back:hover { opacity: 1; }
+.fv-back svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  fill: none;
 }
 
 .fv-title {
