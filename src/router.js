@@ -80,6 +80,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/admin/banned',
+    name: 'BannedUsers',
+    component: () => import('./views/BannedUsersView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('./views/AdminView.vue'),
