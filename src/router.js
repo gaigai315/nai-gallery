@@ -93,7 +93,27 @@ const routes = [
   },
 ];
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory(),
   routes,
 });
+
+// Pages deployments can briefly serve the old HTML shell while a new chunk is
+// propagating. Retry once so users are not stranded on a blank authenticated page.
+router.onError((error) => {
+  const message = String(error?.message || error);
+  if (!message.includes("dynamically imported module") && !message.includes("Importing a module script failed")) return;
+
+  const retryKey = "nai-chunk-retry";
+  if (sessionStorage.getItem(retryKey) === "1") return;
+  sessionStorage.setItem(retryKey, "1");
+  const url = new URL(window.location.href);
+  url.searchParams.set("_refresh", String(Date.now()));
+  window.location.replace(url.toString());
+});
+
+router.afterEach(() => {
+  sessionStorage.removeItem("nai-chunk-retry");
+});
+
+export default router;
