@@ -13,5 +13,5 @@ export async function onRequestGet({ request, env, params }) {
   if (!image) return json({ error: "not_found" }, 404);
 
   const key = image.preview_r2_key || image.r2_key;
-  return Response.redirect(await createR2SignedGetUrl(env, key, 120), 302);
+  return Response.redirect(await createR2SignedGetUrl(env, key, 600), 302);
 }
