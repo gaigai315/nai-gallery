@@ -2106,12 +2106,13 @@ function copyToClipboard(text) {
 
 /* 图片卡片下载徽标 */
 .image-card-dl {
-  font-size: 10px; padding: 1px 6px; margin: 0 8px;
-  border-radius: 8px; background: rgba(122,139,100,0.2); color: var(--secondary);
+  font-size: 10px; padding: 1px 6px; margin: 0 4px;
+  border-radius: 6px; background: rgba(255,255,255,0.06); color: var(--text);
+  opacity: 0.6;
   cursor: pointer; display: inline-block;
   transition: background 0.2s;
 }
-.image-card-dl:hover { background: rgba(122,139,100,0.35); }
+.image-card-dl:hover { background: rgba(255,255,255,0.12); opacity: 0.85; }
 
 /* 图片卡片展开的下载者列表 */
 .image-downloaders {
