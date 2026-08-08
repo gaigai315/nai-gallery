@@ -11,7 +11,7 @@ export async function onRequestGet({ request, env }) {
             COUNT(DISTINCT i.image_id) AS image_count,
             COUNT(DISTINCT g.group_id) AS group_count,
             COUNT(DISTINCT u.discord_id) AS unlock_count,
-            COUNT(d.id) AS download_count
+            COUNT(DISTINCT d.id) AS download_count
      FROM batches b
      LEFT JOIN images i ON i.batch_id = b.batch_id
      LEFT JOIN prompt_groups g ON g.batch_id = b.batch_id
