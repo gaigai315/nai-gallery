@@ -19,9 +19,10 @@ export async function onRequestGet({ request, env, params }) {
   ).bind(...bind).first();
 
   const images = await env.DB.prepare(
-    `SELECT i.image_id, i.group_id, COALESCE(g.title, '未分组') AS group_title,
+    `SELECT i.image_id, i.group_id, COALESCE(g.title, '\u672a\u5206\u7ec4') AS group_title,
             i.prompt_preview, i.seed, i.width, i.height,
-            i.r2_key, i.preview_r2_key, i.created_at
+            i.r2_key, i.preview_r2_key, i.created_at,
+            (SELECT COUNT(*) FROM downloads_log dl WHERE dl.image_id = i.image_id) AS download_count
      FROM images i
      LEFT JOIN prompt_groups g ON i.group_id = g.group_id
      ${where}

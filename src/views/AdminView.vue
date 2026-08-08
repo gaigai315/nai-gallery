@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="view-container active">
     <div class="admin-shell">
       <router-link to="/gallery" class="icon-btn back-btn" aria-label="返回">
@@ -87,6 +87,9 @@
                 <button class="icon-btn small" title="批次设置" @click="openSettings(b)">
                   <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" stroke="currentColor" stroke-width="1.5"/></svg>
                 </button>
+                <button class="icon-btn small" title="下载记录" @click="openBatchDownloads(b)">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
                 <button class="icon-btn small" :title="expandedBatch === b.batch_id ? '收起' : '展开详情'" @click="toggleExpandBatch(b)">
                   <svg viewBox="0 0 24 24" :style="{ transform: expandedBatch === b.batch_id ? 'rotate(180deg)' : 'none' }"><path d="M6 9l6 6 6-6" /></svg>
                 </button>
@@ -104,17 +107,6 @@
                     <li v-for="u in activityCache[b.batch_id].unlocks" :key="u.discord_id">
                       <strong>{{ u.username }}</strong>
                       <span class="activity-time">{{ formatDate(u.unlocked_at) }}</span>
-                    </li>
-                  </ul>
-                </div>
-                <div class="activity-col">
-                  <h4>最近下载</h4>
-                  <p v-if="!activityCache[b.batch_id]?.downloads?.length" class="no-data">暂无</p>
-                  <ul v-else class="activity-list">
-                    <li v-for="d in activityCache[b.batch_id].downloads" :key="d.discord_id + d.timestamp + d.image_id">
-                      <strong>{{ d.username }}</strong>
-                      <span>{{ d.asset === 'txt' ? 'TXT' : '图片' }}</span>
-                      <span class="activity-time">{{ formatDate(d.timestamp) }}</span>
                     </li>
                   </ul>
                 </div>
@@ -339,12 +331,25 @@
                     <span>{{ formatDate(img.created_at) }}</span>
                   </p>
                   <p class="image-card-group">{{ img.group_title }}</p>
+                  <p class="image-card-dl" v-if="img.download_count" @click.stop="toggleImageDownloaders(img)">
+                    ↓ {{ img.download_count }}次下载
+                  </p>
                 </div>
                 <div class="image-card-actions">
                   <button class="btn-outline tiny" @click="startMoveImage(img)">移动</button>
                   <button class="btn-outline tiny" @click="startCompressImage(img)">压缩</button>
                   <button class="btn-danger tiny" @click="confirmDeleteImage(img)">删除</button>
                 </div>
+                  <div v-if="imageDownloaders[img.image_id]" class="image-downloaders">
+                    <p v-if="imageDlLoading[img.image_id]" class="admin-placeholder" style="font-size:10px">加载中...</p>
+                    <ul v-else class="activity-list">
+                      <li v-for="dl in imageDownloaders[img.image_id]" :key="dl.discord_id + dl.timestamp">
+                        <strong>{{ dl.username }}</strong>
+                        <span class="activity-time">{{ formatDate(dl.timestamp) }}</span>
+                      </li>
+                    </ul>
+                  </div>
+
               </div>
             </div>
 
@@ -522,18 +527,38 @@
           <tr><th>用户</th><th>角色</th><th>解锁数</th><th>下载数</th><th>最后活跃</th><th>操作</th></tr>
         </thead>
         <tbody>
-          <tr v-for="u in users" :key="u.discord_id">
-            <td><strong>{{ u.username }}</strong><br /><small>{{ u.discord_id }}</small></td>
-            <td><span :class="['role-badge', u.role]">{{ u.role === 'admin' ? '管理员' : '用户' }}</span></td>
-            <td>{{ u.unlock_count }}</td>
-            <td>{{ u.download_count }}</td>
-            <td>{{ u.last_active ? formatDate(u.last_active) : '从未' }}</td>
-            <td>
-              <button v-if="u.role === 'user'" class="btn-outline small" @click="promoteUser(u.discord_id)">提权</button>
-              <button v-else-if="u.role === 'admin'" class="btn-outline small" @click="demoteUser(u.discord_id)">降权</button>
-              <button class="btn-outline small danger-text" @click="blockUser(u.discord_id)">拉黑</button>
-            </td>
-          </tr>
+          <template v-for="u in users" :key="u.discord_id">
+            <tr>
+              <td>
+                <button class="icon-btn small expand-arrow" :class="{ open: expandedUser === u.discord_id }" @click="toggleUserDownloads(u)" style="width:20px;height:20px;border-radius:50%;font-size:10px;padding:0;margin-right:6px;display:inline-flex;align-items:center;justify-content:center;">▶</button>
+                <strong>{{ u.username }}</strong><br /><small>{{ u.discord_id }}</small>
+              </td>
+              <td><span :class="['role-badge', u.role]">{{ u.role === 'admin' ? '管理员' : '用户' }}</span></td>
+              <td>{{ u.unlock_count }}</td>
+              <td>{{ u.download_count }}</td>
+              <td>{{ u.last_active ? formatDate(u.last_active) : '从未' }}</td>
+              <td>
+                <button v-if="u.role === 'user'" class="btn-outline small" @click="promoteUser(u.discord_id)">提权</button>
+                <button v-else-if="u.role === 'admin'" class="btn-outline small" @click="demoteUser(u.discord_id)">降权</button>
+                <button class="btn-outline small danger-text" @click="blockUser(u.discord_id)">拉黑</button>
+              </td>
+            </tr>
+            <tr v-if="expandedUser === u.discord_id" class="user-downloads-row">
+              <td :colspan="6">
+                <div v-if="userDownloadsLoading[u.discord_id]" class="admin-placeholder" style="font-size:12px">加载中...</div>
+                <p v-else-if="userDownloadsError[u.discord_id]" class="status-error" style="font-size:12px">{{ userDownloadsError[u.discord_id] }}</p>
+                <div v-else-if="!userDownloads[u.discord_id]?.length" class="no-data" style="padding:8px">暂无下载记录</div>
+                <table v-else class="inner-table">
+                  <thead><tr><th>批次名称</th><th>下载图片数</th><th>最后下载时间</th></tr></thead>
+                  <tbody><tr v-for="b in userDownloads[u.discord_id]" :key="b.batch_id">
+                    <td>{{ b.batch_name || b.batch_id }}</td>
+                    <td>{{ b.image_count }}</td>
+                    <td>{{ formatDate(b.last_download) }}</td>
+                  </tr></tbody>
+                </table>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
       <div class="blacklist-panel">
@@ -587,6 +612,41 @@
       <div v-if="dlTotal > downloads.length" style="text-align:center;margin-top:12px">
         <button class="btn-outline" @click="fetchDownloads(downloads.length)">加载更多</button>
       </div>
+    </section>
+
+    <!-- 批次下载详情 -->
+    <section v-if="view === 'batch-downloads'" class="admin-card">
+      <div class="list-toolbar">
+        <h2>批次下载记录 — {{ batchDownloadsName }}</h2>
+        <button class="btn-outline" @click="view = 'list'">← 返回列表</button>
+      </div>
+      <div v-if="batchDlLoading" class="admin-placeholder">加载中...</div>
+      <p v-else-if="batchDlError" class="status-error">{{ batchDlError }}</p>
+      <div v-else-if="!batchDownloadsData.length" class="empty-state"><p>暂无下载记录</p></div>
+      <table v-else class="data-table">
+        <thead>
+          <tr><th>用户</th><th>图片</th><th>类型</th><th>时间</th><th>IP</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="d in batchDownloadsData" :key="d.id">
+            <td><strong>{{ d.username }}</strong></td>
+            <td>
+              <div class="dl-img-row">
+                <img
+                  v-if="d.image_id"
+                  :src="'/api/admin/preview/' + encodeURIComponent(d.image_id) + '?batch_id=' + encodeURIComponent(d.batch_id)"
+                  class="dl-thumb"
+                  loading="lazy"
+                />
+                <span class="dl-prompt">{{ (d.prompt_preview || '').slice(0, 40) }}</span>
+              </div>
+            </td>
+            <td>{{ d.asset === 'txt' ? 'TXT' : '图片' }}</td>
+            <td>{{ formatDate(d.timestamp) }}</td>
+            <td><small>{{ (d.ip_hash || '').slice(-4) }}</small></td>
+          </tr>
+        </tbody>
+      </table>
     </section>
 
     <!-- 批次设置弹窗 -->
@@ -764,6 +824,24 @@ const dlTotal = ref(0);
 const dlUserFilter = ref('');
 const dlBatchFilter = ref('');
 let dlDebounceTimer = null;
+
+// ---- 批次下载详情 ----
+const batchDownloadsId = ref('');
+const batchDownloadsName = ref('');
+const batchDownloadsData = ref([]);
+const batchDlLoading = ref(false);
+const batchDlError = ref('');
+
+// ---- 图片下载者 ----
+const imageDownloaders = reactive({});
+const imageDlLoading = reactive({});
+
+// ---- 用户下载明细 ----
+const expandedUser = ref(null);
+const userDownloads = reactive({});
+const userDownloadsLoading = reactive({});
+const userDownloadsError = reactive({});
+
 
 async function fetchStats() {
   try {
@@ -1551,6 +1629,70 @@ onMounted(() => {
   document.addEventListener('click', onDocClick);
 });
 // Click-outside handler for more menu
+
+// ---- 批次下载详情视图 ----
+function openBatchDownloads(b) {
+  batchDownloadsId.value = b.batch_id;
+  batchDownloadsName.value = b.batch_name;
+  batchDownloadsData.value = [];
+  batchDlError.value = '';
+  view.value = 'batch-downloads';
+  fetchBatchDownloads();
+}
+
+async function fetchBatchDownloads() {
+  batchDlLoading.value = true;
+  batchDlError.value = '';
+  try {
+    const data = await apiFetch('/api/admin/downloads?batch=' + encodeURIComponent(batchDownloadsId.value) + '&limit=200');
+    batchDownloadsData.value = data.downloads || [];
+  } catch (e) {
+    batchDlError.value = e.message || '加载下载记录失败';
+  } finally {
+    batchDlLoading.value = false;
+  }
+}
+
+// ---- 图片下载者明细 ----
+async function toggleImageDownloaders(img) {
+  const key = img.image_id;
+  if (imageDownloaders[key]) {
+    delete imageDownloaders[key];
+    return;
+  }
+  imageDlLoading[key] = true;
+  try {
+    const data = await apiFetch('/api/admin/images/' + encodeURIComponent(img.image_id) + '/downloads');
+    imageDownloaders[key] = data.downloads || [];
+  } catch (e) {
+    imageDownloaders[key] = [];
+  } finally {
+    imageDlLoading[key] = false;
+  }
+}
+
+// ---- 用户下载明细展开 ----
+async function toggleUserDownloads(u) {
+  const key = u.discord_id;
+  if (expandedUser.value === key) {
+    expandedUser.value = null;
+    return;
+  }
+  expandedUser.value = key;
+  if (userDownloads[key]) return;
+  userDownloadsLoading[key] = true;
+  userDownloadsError[key] = '';
+  try {
+    const data = await apiFetch('/api/admin/users/' + encodeURIComponent(key) + '/downloads');
+    userDownloads[key] = data.batches || [];
+  } catch (e) {
+    userDownloads[key] = [];
+    userDownloadsError[key] = e.message || '加载下载明细失败';
+  } finally {
+    userDownloadsLoading[key] = false;
+  }
+}
+
 function onDocClick(e) {
   const moreBtn = document.querySelector('.btn-more');
   const dropdown = document.querySelector('.more-dropdown');
@@ -1955,6 +2097,40 @@ function copyToClipboard(text) {
 .filter-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--glass-bg, rgba(255,255,255,0.06)); border: 1px solid var(--glass-border, rgba(255,255,255,0.12)); border-radius: 20px; padding: 4px 12px; font-size: 13px; color: var(--text-primary, #fff); }
 .tag-remove { background: none; border: none; color: var(--text-secondary, rgba(255,255,255,0.5)); cursor: pointer; font-size: 16px; line-height: 1; padding: 0; margin-left: 2px; }
 .tag-remove:hover { color: #ff6b6b; }
+
+
+/* 批次下载详情图片行 */
+.dl-img-row { display: flex; align-items: center; gap: 8px; }
+.dl-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid var(--glass-border); flex-shrink: 0; }
+.dl-prompt { font-size: 11px; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+
+/* 图片卡片下载徽标 */
+.image-card-dl {
+  font-size: 10px; padding: 1px 6px; margin: 0 8px;
+  border-radius: 8px; background: rgba(122,139,100,0.2); color: var(--secondary);
+  cursor: pointer; display: inline-block;
+  transition: background 0.2s;
+}
+.image-card-dl:hover { background: rgba(122,139,100,0.35); }
+
+/* 图片卡片展开的下载者列表 */
+.image-downloaders {
+  padding: 6px 8px; border-top: 1px solid var(--glass-border);
+  background: rgba(0,0,0,0.1);
+}
+.image-downloaders .activity-list { font-size: 11px; gap: 4px; }
+.image-downloaders .activity-list li { gap: 6px; }
+.image-downloaders .activity-time { font-size: 10px; }
+
+/* 用户下载展开行 */
+.user-downloads-row td { padding: 0 !important; border-bottom: 2px solid var(--glass-border); }
+.inner-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.inner-table th { text-align: left; padding: 6px 12px; border-bottom: 1px solid var(--glass-border); opacity: 0.6; font-size: 11px; }
+.inner-table td { padding: 6px 12px; border-bottom: 1px solid var(--glass-border); }
+
+/* 展开箭头 */
+.expand-arrow { transition: transform 0.2s; }
+.expand-arrow.open { transform: rotate(90deg); }
 
 /* 数据表格 (用户管理/下载记录) */
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
