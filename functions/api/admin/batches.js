@@ -3,24 +3,24 @@ import { readJson } from "../../_lib/request.js";
 import { json, requireAdmin } from "../../_lib/session.js";
 
 export async function onRequestGet({ request, env }) {
-  const auth = await requireAdmin(request, env);
-  if (auth.response) return auth.response;
+  try {
+    const auth = await requireAdmin(request, env);
+    if (auth.response) return auth.response;
 
-  const rows = await env.DB.prepare(
-    `SELECT b.batch_id, b.batch_name, b.created_at, b.expire_at, b.is_active, b.notes, b.cover_image_id,
-            COUNT(DISTINCT i.image_id) AS image_count,
-            COUNT(DISTINCT g.group_id) AS group_count,
-            COUNT(DISTINCT u.discord_id) AS unlock_count,
-            COUNT(DISTINCT d.id) AS download_count
-     FROM batches b
-     LEFT JOIN images i ON i.batch_id = b.batch_id
-     LEFT JOIN prompt_groups g ON g.batch_id = b.batch_id
-     LEFT JOIN user_batch_unlocks u ON u.batch_id = b.batch_id
-     LEFT JOIN downloads_log d ON d.batch_id = b.batch_id
-     GROUP BY b.batch_id
-     ORDER BY b.created_at DESC`,
-  ).all();
-  return json({ batches: rows.results || [] });
+    const rows = await env.DB.prepare(
+      `SELECT b.batch_id, b.batch_name, b.created_at, b.expire_at, b.is_active, b.notes, b.cover_image_id,
+              (SELECT COUNT(*) FROM images WHERE batch_id = b.batch_id) AS image_count,
+              (SELECT COUNT(*) FROM prompt_groups WHERE batch_id = b.batch_id) AS group_count,
+              (SELECT COUNT(*) FROM user_batch_unlocks WHERE batch_id = b.batch_id) AS unlock_count,
+              (SELECT COUNT(*) FROM downloads_log WHERE batch_id = b.batch_id) AS download_count
+       FROM batches b
+       ORDER BY b.created_at DESC`,
+    ).all();
+    return json({ batches: rows.results || [] });
+  } catch (error) {
+    console.error("list batches failed", error);
+    return json({ error: "internal_error", detail: error instanceof Error ? error.message : String(error) }, 500);
+  }
 }
 
 export async function onRequestPost({ request, env }) {

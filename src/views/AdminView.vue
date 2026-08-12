@@ -580,6 +580,59 @@
           </tr></tbody>
         </table>
       </div>
+      <div class="guild-access-panel">
+        <div class="list-toolbar">
+          <h3>服务器白名单 / 黑名单</h3>
+        </div>
+        <p class="pledge-hint">粘贴 Discord 邀请链接或邀请码，解析后可加入名单。白名单为空时对服务器不做限制；有白名单时用户必须命中其中一个服务器；黑名单一票否决。</p>
+        <form class="filter-row" @submit.prevent="resolveGuildInvite">
+          <input v-model="guildInvite" class="filter-input" placeholder="例如 https://discord.gg/xxxx 或邀请码" />
+          <button class="btn-outline" type="submit" :disabled="guildResolving">{{ guildResolving ? '解析中...' : '解析邀请' }}</button>
+        </form>
+        <div v-if="guildResolveResult" class="guild-resolve-card">
+          <div class="guild-resolve-info">
+            <strong>{{ guildResolveResult.guild_name || '未命名服务器' }}</strong>
+            <span class="guild-id">{{ guildResolveResult.guild_id }}</span>
+            <span v-if="guildResolveResult.member_count != null" class="guild-meta">约 {{ guildResolveResult.member_count }} 人</span>
+          </div>
+          <div class="guild-resolve-actions">
+            <button class="btn-outline small" @click="addGuildToList('whitelist')">加入白名单</button>
+            <button class="btn-danger small" @click="addGuildToList('blacklist')">加入黑名单</button>
+          </div>
+        </div>
+        <p v-if="guildError" class="status-error">{{ guildError }}</p>
+
+        <div class="guild-list-row">
+          <div class="guild-list-col">
+            <h4>白名单</h4>
+            <p v-if="!guildAccess.whitelist.length" class="no-data">暂无服务器</p>
+            <table v-else class="data-table">
+              <thead><tr><th>服务器</th><th>成员</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr v-for="g in guildAccess.whitelist" :key="g.guild_id">
+                  <td><strong>{{ g.guild_name || '未命名服务器' }}</strong><br /><small>{{ g.guild_id }}</small></td>
+                  <td>{{ g.member_count != null ? '约 ' + g.member_count + ' 人' : '—' }}</td>
+                  <td><button class="btn-outline small" @click="removeGuildFromList('whitelist', g.guild_id)">移除</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="guild-list-col">
+            <h4>黑名单</h4>
+            <p v-if="!guildAccess.blacklist.length" class="no-data">暂无服务器</p>
+            <table v-else class="data-table">
+              <thead><tr><th>服务器</th><th>成员</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr v-for="g in guildAccess.blacklist" :key="g.guild_id">
+                  <td><strong>{{ g.guild_name || '未命名服务器' }}</strong><br /><small>{{ g.guild_id }}</small></td>
+                  <td>{{ g.member_count != null ? '约 ' + g.member_count + ' 人' : '—' }}</td>
+                  <td><button class="btn-outline small" @click="removeGuildFromList('blacklist', g.guild_id)">移除</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- 下载记录 -->
@@ -817,6 +870,12 @@ const blacklistSaving = ref(false);
 const blacklistError = ref('');
 const usersLoading = ref(false);
 const usersError = ref('');
+const guildAccess = reactive({ whitelist: [], blacklist: [] });
+const guildInvite = ref('');
+const guildResolving = ref(false);
+const guildResolveResult = ref(null);
+const guildSaving = ref(false);
+const guildError = ref('');
 const downloads = ref([]);
 const dlLoading = ref(false);
 const downloadsError = ref('');
@@ -1702,7 +1761,7 @@ function onDocClick(e) {
 }
 
 // ---- 用户管理 ----
-function openUsers() { view.value = 'users'; fetchUsers(); }
+function openUsers() { view.value = 'users'; fetchUsers(); fetchGuildAccess(); }
 async function fetchUsers() {
   usersLoading.value = true;
   usersError.value = '';
@@ -1715,6 +1774,18 @@ async function fetchUsers() {
     usersError.value = e.message || '用户列表加载失败';
   } finally {
     usersLoading.value = false;
+  }
+}
+async function fetchGuildAccess() {
+  guildError.value = '';
+  try {
+    const data = await apiFetch('/api/admin/guild-access');
+    guildAccess.whitelist = data.whitelist || [];
+    guildAccess.blacklist = data.blacklist || [];
+  } catch (e) {
+    guildAccess.whitelist = [];
+    guildAccess.blacklist = [];
+    guildError.value = e.message || '服务器名单加载失败';
   }
 }
 async function addBlockedUser() {
@@ -1752,6 +1823,70 @@ async function demoteUser(discordId) {
     const u = users.value.find(x => x.discord_id === discordId);
     if (u) u.role = 'user';
   } catch (e) { /* toast handled by apiFetch */ }
+}
+
+// ---- 服务器白名单 / 黑名单 ----
+async function resolveGuildInvite() {
+  const value = guildInvite.value.trim();
+  if (!value) {
+    guildError.value = '请输入邀请链接或邀请码';
+    return;
+  }
+  guildResolving.value = true;
+  guildError.value = '';
+  guildResolveResult.value = null;
+  try {
+    const data = await apiFetch('/api/admin/guild-access', {
+      method: 'POST',
+      body: JSON.stringify({ invite: value }),
+    });
+    guildResolveResult.value = data;
+  } catch (e) {
+    guildResolveResult.value = null;
+    guildError.value = e.message || '邀请链接解析失败';
+  } finally {
+    guildResolving.value = false;
+  }
+}
+
+async function addGuildToList(listType) {
+  const item = guildResolveResult.value;
+  if (!item?.guild_id) return;
+  const target = guildAccess[listType];
+  if (!target.some(g => g.guild_id === item.guild_id)) {
+    target.push({
+      guild_id: item.guild_id,
+      guild_name: item.guild_name || '',
+      member_count: item.member_count ?? null,
+      added_at: new Date().toISOString(),
+    });
+  }
+  guildResolveResult.value = null;
+  guildInvite.value = '';
+  await saveGuildAccess();
+}
+
+async function removeGuildFromList(listType, guildId) {
+  guildAccess[listType] = guildAccess[listType].filter(g => g.guild_id !== guildId);
+  await saveGuildAccess();
+}
+
+async function saveGuildAccess() {
+  guildSaving.value = true;
+  guildError.value = '';
+  try {
+    await apiFetch('/api/admin/guild-access', {
+      method: 'PUT',
+      body: JSON.stringify({
+        whitelist: guildAccess.whitelist,
+        blacklist: guildAccess.blacklist,
+      }),
+    });
+  } catch (e) {
+    guildError.value = e.message || '服务器名单保存失败';
+  } finally {
+    guildSaving.value = false;
+  }
 }
 
 // ---- 下载记录 ----
@@ -2157,4 +2292,33 @@ function copyToClipboard(text) {
 
 /* 小号按钮变体 */
 .btn-outline.small { padding: 4px 12px; font-size: 12px; border-radius: 12px; }
+
+/* 服务器白名单 / 黑名单 */
+.guild-access-panel {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--glass-border);
+}
+.guild-access-panel h3 { font-size: 16px; margin-bottom: 8px; }
+.guild-resolve-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--secondary);
+  background: rgba(122,139,100,0.1);
+}
+.guild-resolve-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.guild-id { font-family: monospace; font-size: 11px; opacity: 0.6; }
+.guild-meta { font-size: 11px; opacity: 0.6; }
+.guild-resolve-actions { display: flex; gap: 8px; }
+.guild-list-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px; }
+.guild-list-col h4 { font-size: 13px; opacity: 0.7; margin-bottom: 8px; letter-spacing: 1px; }
+@media (max-width: 768px) {
+  .guild-list-row { grid-template-columns: 1fr; }
+}
 </style>

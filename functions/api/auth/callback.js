@@ -1,6 +1,11 @@
 ﻿import { createSessionCookie } from "../../_lib/session.js";
 import { upsertUser } from "../../_lib/db.js";
 import { base64UrlEncode, hmacSha256 } from "../../_lib/crypto.js";
+import {
+  GUILD_WHITELIST_KEY,
+  GUILD_BLACKLIST_KEY,
+  readGuildList,
+} from "../../_lib/guild-access.js";
 
 function readCookie(request, name) {
   const header = request.headers.get("Cookie") || "";
@@ -58,54 +63,77 @@ export async function onRequestGet({ request, env }) {
     return Response.redirect(`${env.PUBLIC_BASE_URL || url.origin}/?auth=blacklisted`, 302);
   }
 
-  // Discord guild + role verification (optional — skips if no guild setting exists).
-  // DISCORD_GUILD_ROLE_PAIRS accepts comma-separated guild:role pairs.
-  // The older DISCORD_GUILD_ID + DISCORD_REQUIRED_ROLE_ID settings remain supported.
-  if (env.DISCORD_GUILD_ID) {
-    const guildIds = env.DISCORD_GUILD_ID.split(',').map(s => s.trim()).filter(Boolean);
-    let inGuild = false;
-    let memberRoles = [];
-    for (const gid of guildIds) {
-      const memberUrl = `https://discord.com/api/users/@me/guilds/${gid}/member`;
-      const memberResp = await fetch(memberUrl, {
-        headers: { Authorization: `Bearer ${token.access_token}` },
-      });
-      if (memberResp.ok) {
-        inGuild = true;
-        if (env.DISCORD_REQUIRED_ROLE_ID) {
-          const member = await memberResp.json();
-          memberRoles = member.roles || [];
-        }
-        break;
-      }
-    }
-    if (!inGuild) {
-      return Response.redirect(`${env.PUBLIC_BASE_URL || url.origin}/?auth=not_in_guild`, 302);
-    }
-    if (env.DISCORD_REQUIRED_ROLE_ID && !memberRoles.includes(env.DISCORD_REQUIRED_ROLE_ID)) {
-      return Response.redirect(`${env.PUBLIC_BASE_URL || url.origin}/?auth=role_denied`, 302);
-    }
-  }
+  const baseUrl = env.PUBLIC_BASE_URL || url.origin;
+  const whitelist = await readGuildList(env, GUILD_WHITELIST_KEY);
+  const blacklist = await readGuildList(env, GUILD_BLACKLIST_KEY);
+  const hasGuildAccessRules = whitelist.length > 0 || blacklist.length > 0;
 
-  if (env.DISCORD_GUILD_ROLE_PAIRS) {
-    const pairs = env.DISCORD_GUILD_ROLE_PAIRS.split(',')
-      .map(pair => pair.trim().split(':').map(value => value.trim()))
-      .filter(([guildId, roleId]) => guildId && roleId);
-    let allowed = false;
-    for (const [guildId, roleId] of pairs) {
-      const memberResp = await fetch(`https://discord.com/api/users/@me/guilds/${guildId}/member`, {
-        headers: { Authorization: `Bearer ${token.access_token}` },
-      });
-      if (memberResp.ok) {
-        const member = await memberResp.json();
-        if ((member.roles || []).includes(roleId)) {
-          allowed = true;
+  if (hasGuildAccessRules) {
+    const guildsResp = await fetch("https://discord.com/api/users/@me/guilds", {
+      headers: { Authorization: `Bearer ${token.access_token}` },
+    });
+    if (!guildsResp.ok) {
+      return Response.redirect(`${baseUrl}/?auth=failed`, 302);
+    }
+    const guilds = await guildsResp.json();
+    const userGuildIds = new Set((Array.isArray(guilds) ? guilds : []).map(g => g.id));
+
+    if (blacklist.some(g => userGuildIds.has(g.guild_id))) {
+      return Response.redirect(`${baseUrl}/?auth=blocked_guild`, 302);
+    }
+    if (whitelist.length && !whitelist.some(g => userGuildIds.has(g.guild_id))) {
+      return Response.redirect(`${baseUrl}/?auth=not_in_guild`, 302);
+    }
+  } else {
+    // Legacy Discord guild + role verification (only used when no D1 server list is set).
+    // DISCORD_GUILD_ROLE_PAIRS accepts comma-separated guild:role pairs.
+    // The older DISCORD_GUILD_ID + DISCORD_REQUIRED_ROLE_ID settings remain supported.
+    if (env.DISCORD_GUILD_ID) {
+      const guildIds = env.DISCORD_GUILD_ID.split(',').map(s => s.trim()).filter(Boolean);
+      let inGuild = false;
+      let memberRoles = [];
+      for (const gid of guildIds) {
+        const memberUrl = `https://discord.com/api/users/@me/guilds/${gid}/member`;
+        const memberResp = await fetch(memberUrl, {
+          headers: { Authorization: `Bearer ${token.access_token}` },
+        });
+        if (memberResp.ok) {
+          inGuild = true;
+          if (env.DISCORD_REQUIRED_ROLE_ID) {
+            const member = await memberResp.json();
+            memberRoles = member.roles || [];
+          }
           break;
         }
       }
+      if (!inGuild) {
+        return Response.redirect(`${baseUrl}/?auth=not_in_guild`, 302);
+      }
+      if (env.DISCORD_REQUIRED_ROLE_ID && !memberRoles.includes(env.DISCORD_REQUIRED_ROLE_ID)) {
+        return Response.redirect(`${baseUrl}/?auth=role_denied`, 302);
+      }
     }
-    if (!allowed) {
-      return Response.redirect(`${env.PUBLIC_BASE_URL || url.origin}/?auth=role_denied`, 302);
+
+    if (env.DISCORD_GUILD_ROLE_PAIRS) {
+      const pairs = env.DISCORD_GUILD_ROLE_PAIRS.split(',')
+        .map(pair => pair.trim().split(':').map(value => value.trim()))
+        .filter(([guildId, roleId]) => guildId && roleId);
+      let allowed = false;
+      for (const [guildId, roleId] of pairs) {
+        const memberResp = await fetch(`https://discord.com/api/users/@me/guilds/${guildId}/member`, {
+          headers: { Authorization: `Bearer ${token.access_token}` },
+        });
+        if (memberResp.ok) {
+          const member = await memberResp.json();
+          if ((member.roles || []).includes(roleId)) {
+            allowed = true;
+            break;
+          }
+        }
+      }
+      if (!allowed) {
+        return Response.redirect(`${baseUrl}/?auth=role_denied`, 302);
+      }
     }
   }
 
