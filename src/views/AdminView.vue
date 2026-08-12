@@ -584,16 +584,23 @@
         <div class="list-toolbar">
           <h3>服务器白名单 / 黑名单</h3>
         </div>
-        <p class="pledge-hint">粘贴 Discord 邀请链接或邀请码，解析后可加入名单。白名单为空时对服务器不做限制；有白名单时用户必须命中其中一个服务器；黑名单一票否决。</p>
+        <p class="pledge-hint">粘贴 Discord 邀请链接、邀请码或服务器 ID，解析后可加入名单。白名单为空时对服务器不做限制；有白名单时用户必须命中其中一个服务器或身份组；黑名单一票否决。</p>
         <form class="filter-row" @submit.prevent="resolveGuildInvite">
-          <input v-model="guildInvite" class="filter-input" placeholder="例如 https://discord.gg/xxxx 或邀请码" />
-          <button class="btn-outline" type="submit" :disabled="guildResolving">{{ guildResolving ? '解析中...' : '解析邀请' }}</button>
+          <input v-model="guildInvite" class="filter-input" placeholder="例如 https://discord.gg/xxxx、邀请码或服务器 ID" />
+          <button class="btn-outline" type="submit" :disabled="guildResolving">{{ guildResolving ? '解析中...' : '解析' }}</button>
         </form>
         <div v-if="guildResolveResult" class="guild-resolve-card">
           <div class="guild-resolve-info">
             <strong>{{ guildResolveResult.guild_name || '未命名服务器' }}</strong>
             <span class="guild-id">{{ guildResolveResult.guild_id }}</span>
             <span v-if="guildResolveResult.member_count != null" class="guild-meta">约 {{ guildResolveResult.member_count }} 人</span>
+          </div>
+          <div class="guild-role-row">
+            <input v-model="guildNameOverride" class="filter-input" placeholder="服务器名称（可选，填 ID 且名称空白时可手动补上）" />
+          </div>
+          <div class="guild-role-row">
+            <input v-model="guildRoleId" class="filter-input" placeholder="身份组 ID（可选，留空则整个服务器）" />
+            <input v-model="guildRoleName" class="filter-input" placeholder="身份组名（可选）" />
           </div>
           <div class="guild-resolve-actions">
             <button class="btn-outline small" @click="addGuildToList('whitelist')">加入白名单</button>
@@ -607,12 +614,13 @@
             <h4>白名单</h4>
             <p v-if="!guildAccess.whitelist.length" class="no-data">暂无服务器</p>
             <table v-else class="data-table">
-              <thead><tr><th>服务器</th><th>成员</th><th>操作</th></tr></thead>
+              <thead><tr><th>服务器</th><th>身份组</th><th>成员</th><th>操作</th></tr></thead>
               <tbody>
-                <tr v-for="g in guildAccess.whitelist" :key="g.guild_id">
+                <tr v-for="g in guildAccess.whitelist" :key="g.guild_id + ':' + (g.role_id || '')">
                   <td><strong>{{ g.guild_name || '未命名服务器' }}</strong><br /><small>{{ g.guild_id }}</small></td>
+                  <td>{{ g.role_id ? (g.role_name || g.role_id) : '整个服务器' }}</td>
                   <td>{{ g.member_count != null ? '约 ' + g.member_count + ' 人' : '—' }}</td>
-                  <td><button class="btn-outline small" @click="removeGuildFromList('whitelist', g.guild_id)">移除</button></td>
+                  <td><button class="btn-outline small" @click="removeGuildFromList('whitelist', g.guild_id, g.role_id)">移除</button></td>
                 </tr>
               </tbody>
             </table>
@@ -621,12 +629,13 @@
             <h4>黑名单</h4>
             <p v-if="!guildAccess.blacklist.length" class="no-data">暂无服务器</p>
             <table v-else class="data-table">
-              <thead><tr><th>服务器</th><th>成员</th><th>操作</th></tr></thead>
+              <thead><tr><th>服务器</th><th>身份组</th><th>成员</th><th>操作</th></tr></thead>
               <tbody>
-                <tr v-for="g in guildAccess.blacklist" :key="g.guild_id">
+                <tr v-for="g in guildAccess.blacklist" :key="g.guild_id + ':' + (g.role_id || '')">
                   <td><strong>{{ g.guild_name || '未命名服务器' }}</strong><br /><small>{{ g.guild_id }}</small></td>
+                  <td>{{ g.role_id ? (g.role_name || g.role_id) : '整个服务器' }}</td>
                   <td>{{ g.member_count != null ? '约 ' + g.member_count + ' 人' : '—' }}</td>
-                  <td><button class="btn-outline small" @click="removeGuildFromList('blacklist', g.guild_id)">移除</button></td>
+                  <td><button class="btn-outline small" @click="removeGuildFromList('blacklist', g.guild_id, g.role_id)">移除</button></td>
                 </tr>
               </tbody>
             </table>
@@ -872,6 +881,9 @@ const usersLoading = ref(false);
 const usersError = ref('');
 const guildAccess = reactive({ whitelist: [], blacklist: [] });
 const guildInvite = ref('');
+const guildNameOverride = ref('');
+const guildRoleId = ref('');
+const guildRoleName = ref('');
 const guildResolving = ref(false);
 const guildResolveResult = ref(null);
 const guildSaving = ref(false);
@@ -1829,21 +1841,26 @@ async function demoteUser(discordId) {
 async function resolveGuildInvite() {
   const value = guildInvite.value.trim();
   if (!value) {
-    guildError.value = '请输入邀请链接或邀请码';
+    guildError.value = '请输入邀请链接、邀请码或服务器 ID';
     return;
   }
   guildResolving.value = true;
   guildError.value = '';
   guildResolveResult.value = null;
+  guildNameOverride.value = '';
+  guildRoleId.value = '';
+  guildRoleName.value = '';
   try {
     const data = await apiFetch('/api/admin/guild-access', {
       method: 'POST',
       body: JSON.stringify({ invite: value }),
     });
     guildResolveResult.value = data;
+    guildNameOverride.value = data?.guild_name || '';
   } catch (e) {
     guildResolveResult.value = null;
-    guildError.value = e.message || '邀请链接解析失败';
+    guildNameOverride.value = '';
+    guildError.value = e.message || '解析失败';
   } finally {
     guildResolving.value = false;
   }
@@ -1852,22 +1869,33 @@ async function resolveGuildInvite() {
 async function addGuildToList(listType) {
   const item = guildResolveResult.value;
   if (!item?.guild_id) return;
+  const roleId = guildRoleId.value.trim();
+  if (roleId && !/^\d{17,20}$/.test(roleId)) {
+    guildError.value = '身份组 ID 格式不正确，应为 17-20 位数字';
+    return;
+  }
   const target = guildAccess[listType];
-  if (!target.some(g => g.guild_id === item.guild_id)) {
+  const key = roleId ? `${item.guild_id}:${roleId}` : item.guild_id;
+  if (!target.some(g => `${g.guild_id}:${g.role_id || ''}` === key)) {
     target.push({
       guild_id: item.guild_id,
-      guild_name: item.guild_name || '',
+      guild_name: guildNameOverride.value.trim() || item.guild_name || '',
+      role_id: roleId || null,
+      role_name: roleId ? guildRoleName.value.trim() : '',
       member_count: item.member_count ?? null,
       added_at: new Date().toISOString(),
     });
   }
   guildResolveResult.value = null;
   guildInvite.value = '';
+  guildNameOverride.value = '';
+  guildRoleId.value = '';
+  guildRoleName.value = '';
   await saveGuildAccess();
 }
 
-async function removeGuildFromList(listType, guildId) {
-  guildAccess[listType] = guildAccess[listType].filter(g => g.guild_id !== guildId);
+async function removeGuildFromList(listType, guildId, roleId = '') {
+  guildAccess[listType] = guildAccess[listType].filter(g => !(g.guild_id === guildId && (g.role_id || '') === roleId));
   await saveGuildAccess();
 }
 
@@ -1875,13 +1903,15 @@ async function saveGuildAccess() {
   guildSaving.value = true;
   guildError.value = '';
   try {
-    await apiFetch('/api/admin/guild-access', {
+    const data = await apiFetch('/api/admin/guild-access', {
       method: 'PUT',
       body: JSON.stringify({
         whitelist: guildAccess.whitelist,
         blacklist: guildAccess.blacklist,
       }),
     });
+    guildAccess.whitelist = data.whitelist || [];
+    guildAccess.blacklist = data.blacklist || [];
   } catch (e) {
     guildError.value = e.message || '服务器名单保存失败';
   } finally {
@@ -2301,11 +2331,6 @@ function copyToClipboard(text) {
 }
 .guild-access-panel h3 { font-size: 16px; margin-bottom: 8px; }
 .guild-resolve-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
   padding: 12px 14px;
   margin-bottom: 16px;
   border-radius: 10px;
@@ -2315,7 +2340,8 @@ function copyToClipboard(text) {
 .guild-resolve-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
 .guild-id { font-family: monospace; font-size: 11px; opacity: 0.6; }
 .guild-meta { font-size: 11px; opacity: 0.6; }
-.guild-resolve-actions { display: flex; gap: 8px; }
+.guild-role-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.guild-resolve-actions { display: flex; gap: 8px; margin-top: 10px; }
 .guild-list-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px; }
 .guild-list-col h4 { font-size: 13px; opacity: 0.7; margin-bottom: 8px; letter-spacing: 1px; }
 @media (max-width: 768px) {

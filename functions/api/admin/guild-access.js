@@ -6,6 +6,7 @@ import {
   readGuildList,
   writeGuildList,
   extractInviteCode,
+  isDiscordSnowflake,
 } from "../../_lib/guild-access.js";
 
 function normalizeGuildList(input) {
@@ -14,11 +15,17 @@ function normalizeGuildList(input) {
   const result = [];
   for (const item of input) {
     const guildId = String(item?.guild_id || "").trim();
-    if (!/^\d{17,20}$/.test(guildId) || seen.has(guildId)) continue;
-    seen.add(guildId);
+    if (!/^\d{17,20}$/.test(guildId)) continue;
+    const rawRoleId = String(item?.role_id || "").trim();
+    const roleId = /^\d{17,20}$/.test(rawRoleId) ? rawRoleId : "";
+    const key = roleId ? `${guildId}:${roleId}` : guildId;
+    if (seen.has(key)) continue;
+    seen.add(key);
     result.push({
       guild_id: guildId,
       guild_name: String(item?.guild_name || "").trim().slice(0, 120),
+      role_id: roleId || null,
+      role_name: roleId ? String(item?.role_name || "").trim().slice(0, 120) : "",
       member_count: Number(item?.member_count || 0) || null,
       added_at: item?.added_at || new Date().toISOString(),
     });
@@ -54,8 +61,32 @@ export async function onRequestPost({ request, env }) {
   if (auth.response) return auth.response;
 
   const body = await readJson(request);
-  const code = extractInviteCode(body?.invite || body?.code || body?.url);
-  if (!code) return json({ error: "missing_invite" }, 400);
+  const raw = String(body?.invite || body?.code || body?.url || body?.guild_id || "").trim();
+  if (!raw) return json({ error: "missing_invite" }, 400);
+
+  // Direct guild ID input (a 17-20 digit Discord snowflake).
+  if (isDiscordSnowflake(raw)) {
+    let guildName = String(body?.guild_name || "").trim().slice(0, 120);
+    if (!guildName) {
+      try {
+        const widgetResp = await fetch(`https://discord.com/api/guilds/${raw}/widget.json`);
+        if (widgetResp.ok) {
+          const widget = await widgetResp.json();
+          guildName = String(widget?.name || "").trim().slice(0, 120);
+        }
+      } catch {
+        // Widget is optional; keep the name blank if it is disabled or unreachable.
+      }
+    }
+    return json({
+      guild_id: raw,
+      guild_name: guildName,
+      member_count: null,
+    });
+  }
+
+  const code = extractInviteCode(raw);
+  if (!code) return json({ error: "invalid_invite" }, 400);
 
   const resp = await fetch(
     `https://discord.com/api/v9/invites/${encodeURIComponent(code)}?with_counts=true`,

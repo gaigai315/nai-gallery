@@ -5,6 +5,7 @@ import {
   GUILD_WHITELIST_KEY,
   GUILD_BLACKLIST_KEY,
   readGuildList,
+  fetchMemberRoles,
 } from "../../_lib/guild-access.js";
 
 function readCookie(request, name) {
@@ -78,11 +79,36 @@ export async function onRequestGet({ request, env }) {
     const guilds = await guildsResp.json();
     const userGuildIds = new Set((Array.isArray(guilds) ? guilds : []).map(g => g.id));
 
-    if (blacklist.some(g => userGuildIds.has(g.guild_id))) {
+    const serverBlacklist = blacklist.filter(g => !g.role_id);
+    const roleBlacklist = blacklist.filter(g => g.role_id);
+    if (serverBlacklist.some(g => userGuildIds.has(g.guild_id))) {
       return Response.redirect(`${baseUrl}/?auth=blocked_guild`, 302);
     }
-    if (whitelist.length && !whitelist.some(g => userGuildIds.has(g.guild_id))) {
-      return Response.redirect(`${baseUrl}/?auth=not_in_guild`, 302);
+    for (const rule of roleBlacklist) {
+      if (!userGuildIds.has(rule.guild_id)) continue;
+      const roles = await fetchMemberRoles(token.access_token, rule.guild_id);
+      if (roles.includes(rule.role_id)) {
+        return Response.redirect(`${baseUrl}/?auth=blocked_guild`, 302);
+      }
+    }
+
+    if (whitelist.length) {
+      const serverWhitelist = whitelist.filter(g => !g.role_id);
+      const roleWhitelist = whitelist.filter(g => g.role_id);
+      let allowed = serverWhitelist.some(g => userGuildIds.has(g.guild_id));
+      if (!allowed) {
+        for (const rule of roleWhitelist) {
+          if (!userGuildIds.has(rule.guild_id)) continue;
+          const roles = await fetchMemberRoles(token.access_token, rule.guild_id);
+          if (roles.includes(rule.role_id)) {
+            allowed = true;
+            break;
+          }
+        }
+      }
+      if (!allowed) {
+        return Response.redirect(`${baseUrl}/?auth=not_in_guild`, 302);
+      }
     }
   } else {
     // Legacy Discord guild + role verification (only used when no D1 server list is set).

@@ -34,3 +34,20 @@ export function extractInviteCode(input) {
   }
   return trimmed;
 }
+
+export function isDiscordSnowflake(value) {
+  return /^\d{17,20}$/.test(String(value || "").trim());
+}
+
+export async function fetchMemberRoles(accessToken, guildId) {
+  try {
+    const resp = await fetch(`https://discord.com/api/users/@me/guilds/${guildId}/member`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!resp.ok) return [];
+    const member = await resp.json();
+    return Array.isArray(member.roles) ? member.roles : [];
+  } catch {
+    return [];
+  }
+}
