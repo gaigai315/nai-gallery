@@ -380,13 +380,25 @@ onMounted(fetchAbout);
   z-index: 10;
 }
 .back-link {
-  color: var(--text);
-  opacity: 0.5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(15, 18, 26, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fff;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   text-decoration: none;
-  font-size: 14px;
-  transition: opacity 0.3s;
+  font-size: 13px;
+  letter-spacing: 0;
+  transition: background 0.25s, border-color 0.25s, transform 0.25s;
 }
-.back-link:hover { opacity: 0.8; }
+.back-link:hover {
+  background: rgba(15, 18, 26, 0.58);
+  border-color: rgba(255, 255, 255, 0.28);
+}
 
 /* editor modal */
 .modal-overlay {
