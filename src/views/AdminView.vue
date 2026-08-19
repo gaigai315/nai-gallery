@@ -565,12 +565,13 @@
         <div class="list-toolbar">
           <h3>黑名单</h3>
         </div>
-        <form class="filter-row" @submit.prevent="addBlockedUser">
-          <input v-model="blacklistForm.discord_id" class="filter-input" placeholder="输入 Discord 用户 ID（可提前拉黑未登录用户）" required />
-          <input v-model="blacklistForm.note" class="filter-input" placeholder="备注（可选）" />
-          <button class="btn-danger" type="submit" :disabled="blacklistSaving">{{ blacklistSaving ? '处理中...' : '加入黑名单' }}</button>
+        <form class="filter-row blacklist-form" @submit.prevent="addBlockedUser">
+          <textarea v-model="blacklistForm.rawIds" class="filter-input blacklist-ids" rows="3" placeholder="输入一个或多个 Discord 用户 ID，用逗号、空格或换行分隔（可提前拉黑未登录用户）" required></textarea>
+          <input v-model="blacklistForm.note" class="filter-input" placeholder="备注（可选，批量时共用）" />
+          <button class="btn-danger" type="submit" :disabled="blacklistSaving">{{ blacklistSaving ? '处理中...' : '批量拉黑' }}</button>
         </form>
         <p v-if="blacklistError" class="status-error">{{ blacklistError }}</p>
+        <p v-if="blacklistSuccess" class="status-ok">{{ blacklistSuccess }}</p>
         <div v-if="!blacklist.length" class="empty-state"><p>暂无黑名单用户</p></div>
         <table v-else class="data-table">
           <thead><tr><th>Discord ID</th><th>备注</th><th>加入时间</th><th>操作</th></tr></thead>
@@ -874,9 +875,10 @@ const stats = reactive({ total_users: 0, total_unlocks: 0, total_downloads: 0 })
 
 const users = ref([]);
 const blacklist = ref([]);
-const blacklistForm = ref({ discord_id: '', note: '' });
+const blacklistForm = ref({ rawIds: '', note: '' });
 const blacklistSaving = ref(false);
 const blacklistError = ref('');
+const blacklistSuccess = ref('');
 const usersLoading = ref(false);
 const usersError = ref('');
 const guildAccess = reactive({ whitelist: [], blacklist: [] });
@@ -1803,22 +1805,48 @@ async function fetchGuildAccess() {
 async function addBlockedUser() {
   blacklistSaving.value = true;
   blacklistError.value = '';
+  blacklistSuccess.value = '';
+  const rawIds = String(blacklistForm.value.rawIds || '').trim();
+  const discordIds = [...new Set(rawIds.split(/[\s,，;；]+/).map(s => s.trim()).filter(Boolean))];
+  if (!discordIds.length) {
+    blacklistError.value = '请输入至少一个 Discord 用户 ID';
+    blacklistSaving.value = false;
+    return;
+  }
+  const invalid = discordIds.filter(id => !/^\d{17,20}$/.test(id));
+  if (invalid.length) {
+    blacklistError.value = `以下不是有效的 Discord ID：${invalid.join('、')}`;
+    blacklistSaving.value = false;
+    return;
+  }
   try {
-    await apiFetch('/api/admin/users', { method: 'POST', body: JSON.stringify(blacklistForm.value) });
-    blacklistForm.value = { discord_id: '', note: '' };
+    const data = await apiFetch('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({ discord_ids: discordIds, note: blacklistForm.value.note || '' }),
+    });
+    blacklistForm.value = { rawIds: '', note: '' };
     await fetchUsers();
-  } catch (e) { blacklistError.value = e.message || '加入黑名单失败'; }
-  finally { blacklistSaving.value = false; }
+    blacklistSuccess.value = `已拉黑 ${data?.blacklisted ?? discordIds.length} 个用户`;
+  } catch (e) {
+    blacklistError.value = e.message || '加入黑名单失败';
+  } finally {
+    blacklistSaving.value = false;
+  }
 }
 async function blockUser(discordId) {
   if (!confirm('确定要拉黑这个用户吗？拉黑后将无法登录和访问网站。')) return;
-  blacklistForm.value = { discord_id: discordId, note: '' };
+  blacklistForm.value = { rawIds: discordId, note: '' };
   await addBlockedUser();
 }
 async function unblockUser(discordId) {
   if (!confirm('确定解除拉黑吗？')) return;
-  try { await apiFetch('/api/admin/users?discord_id=' + encodeURIComponent(discordId), { method: 'DELETE' }); await fetchUsers(); }
-  catch (e) { blacklistError.value = e.message || '解除拉黑失败'; }
+  blacklistSuccess.value = '';
+  try {
+    await apiFetch('/api/admin/users?discord_id=' + encodeURIComponent(discordId), { method: 'DELETE' });
+    await fetchUsers();
+  } catch (e) {
+    blacklistError.value = e.message || '解除拉黑失败';
+  }
 }
 async function promoteUser(discordId) {
   if (!confirm('确定将该用户提升为管理员？')) return;
@@ -2315,6 +2343,7 @@ function copyToClipboard(text) {
 .filter-input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text); font-size: 12px; flex: 1; min-width: 160px; font-family: inherit; }
 .filter-input:focus { outline: none; border-color: var(--secondary); }
 .filter-input::placeholder { opacity: 0.4; }
+.blacklist-form .blacklist-ids { flex: 1 1 100%; min-width: 100%; resize: vertical; line-height: 1.5; }
 
 /* 新密码显示 */
 .new-pwd-display { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--glass-bg); border-radius: 10px; border: 1px solid var(--glass-border); font-size: 13px; }

@@ -61,7 +61,7 @@ export async function onRequestGet({ request, env }) {
     .bind(user.id)
     .first();
   if (blocked) {
-    return Response.redirect(`${env.PUBLIC_BASE_URL || url.origin}/?auth=blacklisted`, 302);
+    return Response.redirect(`${env.PUBLIC_BASE_URL || url.origin}/`, 302);
   }
 
   const baseUrl = env.PUBLIC_BASE_URL || url.origin;
@@ -82,13 +82,13 @@ export async function onRequestGet({ request, env }) {
     const serverBlacklist = blacklist.filter(g => !g.role_id);
     const roleBlacklist = blacklist.filter(g => g.role_id);
     if (serverBlacklist.some(g => userGuildIds.has(g.guild_id))) {
-      return Response.redirect(`${baseUrl}/?auth=blocked_guild`, 302);
+      return Response.redirect(`${baseUrl}/`, 302);
     }
     for (const rule of roleBlacklist) {
       if (!userGuildIds.has(rule.guild_id)) continue;
       const roles = await fetchMemberRoles(token.access_token, rule.guild_id);
       if (roles.includes(rule.role_id)) {
-        return Response.redirect(`${baseUrl}/?auth=blocked_guild`, 302);
+        return Response.redirect(`${baseUrl}/`, 302);
       }
     }
 

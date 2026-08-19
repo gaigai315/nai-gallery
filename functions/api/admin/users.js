@@ -28,15 +28,37 @@ export async function onRequestPost({ request, env }) {
   const auth = await requireAdmin(request, env);
   if (auth.response) return auth.response;
   const body = await request.json().catch(() => ({}));
-  const discordId = String(body.discord_id || "").trim();
-  if (!/^\d{17,20}$/.test(discordId)) return json({ error: "invalid_discord_id" }, 400);
-  if (discordId === auth.session.discord_id) return json({ error: "cannot_blacklist_self" }, 400);
-  await env.DB.prepare(
-    `INSERT INTO blacklist (discord_id, note, created_at, created_by)
-     VALUES (?, ?, ?, ?)
-     ON CONFLICT(discord_id) DO UPDATE SET note = excluded.note`,
-  ).bind(discordId, String(body.note || "").trim() || null, new Date().toISOString(), auth.session.discord_id).run();
-  return json({ ok: true });
+  const rawIds = Array.isArray(body.discord_ids)
+    ? body.discord_ids
+    : (body.discord_id ? [body.discord_id] : []);
+  const note = String(body.note || "").trim() || null;
+  const now = new Date().toISOString();
+  const seen = new Set();
+  const discordIds = [];
+  let selfCount = 0;
+  for (const raw of rawIds) {
+    const id = String(raw ?? "").trim();
+    if (!/^\d{17,20}$/.test(id) || seen.has(id)) continue;
+    if (id === auth.session.discord_id) {
+      selfCount += 1;
+      continue;
+    }
+    seen.add(id);
+    discordIds.push(id);
+  }
+  if (!discordIds.length) {
+    return json({ error: selfCount ? "cannot_blacklist_self" : "invalid_discord_id" }, 400);
+  }
+
+  for (const discordId of discordIds) {
+    await env.DB.prepare(
+      `INSERT INTO blacklist (discord_id, note, created_at, created_by)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(discord_id) DO UPDATE SET note = excluded.note`,
+    ).bind(discordId, note, now, auth.session.discord_id).run();
+  }
+
+  return json({ ok: true, blacklisted: discordIds.length });
 }
 
 export async function onRequestDelete({ request, env }) {

@@ -9,7 +9,8 @@ export async function onRequestGet({ request, env }) {
   const blocked = await env.DB.prepare("SELECT 1 AS blocked FROM blacklist WHERE discord_id = ? LIMIT 1")
     .bind(session.discord_id)
     .first();
-  if (blocked) return json({ user: null, error: "blacklisted" }, 403);
+  // Hide blacklisted users from the session view so the client treats them as logged out.
+  if (blocked) return json({ user: null });
   return json({ user });
   } catch (error) {
     console.error("me fetch failed", error);

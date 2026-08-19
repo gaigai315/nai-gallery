@@ -28,7 +28,8 @@ export async function createSessionCookie(env, discordId) {
   const now = Math.floor(Date.now() / 1000);
   const payload = base64UrlEncode(JSON.stringify({ discord_id: discordId, exp: now + SESSION_TTL_SECONDS }));
   const signature = base64UrlEncode(await hmacSha256(env.SESSION_SECRET, payload));
-  return `${cookieName(env)}=${payload}.${signature}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_TTL_SECONDS}`;
+  // Session cookie: no Max-Age, so browsers drop it when the browser closes.
+  return `${cookieName(env)}=${payload}.${signature}; Path=/; HttpOnly; Secure; SameSite=Lax`;
 }
 
 export function clearSessionCookie(env) {
@@ -64,7 +65,9 @@ export async function requireSession(request, env) {
     .bind(session.discord_id)
     .first()
     .catch(() => null);
-  if (blocked) return { response: json({ error: "blacklisted" }, 403) };
+  // Treat blacklisted users as if they are not logged in, so the client just
+  // sends them back to the login screen without revealing their status.
+  if (blocked) return { response: json({ error: "login_required" }, 401) };
   return { session };
 }
 
