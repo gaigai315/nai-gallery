@@ -89,6 +89,7 @@
 import { ref, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { apiFetch } from "../lib/api.js";
+import { initLocalImport, localState } from "../lib/localImport.js";
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -121,14 +122,45 @@ function onInput() {
   debounceTimer = setTimeout(() => doSearch(q), 300);
 }
 
+function includesQuery(...values) {
+  const text = values.filter(Boolean).join(" ").toLowerCase();
+  return text.includes(qLower.value);
+}
+
+const qLower = ref("");
+
+function localSearch(q) {
+  const local = localState();
+  qLower.value = q.toLowerCase();
+  if (searchType.value === "prompt") {
+    return local.gallery.flatMap((batch) => (batch.images || []).filter((image) => includesQuery(image.prompt_preview, image.positive_prompt, batch.batch_name)).map((image) => ({
+      ...image,
+      batch_name: batch.batch_name,
+      preview_url: image.preview_url,
+    })));
+  }
+  if (searchType.value === "batch") {
+    return local.gallery.filter((batch) => includesQuery(batch.batch_name, batch.notes)).map((batch) => ({
+      batch_id: batch.batch_id,
+      batch_name: batch.batch_name,
+      cover_url: batch.cover,
+    }));
+  }
+  if (searchType.value === "vibe") {
+    return local.vibes.filter((item) => includesQuery(item.title, item.content)).map((item) => ({ id: item.id, type: "vibe", title: item.title, content_preview: item.content }));
+  }
+  return local.prompts.filter((item) => includesQuery(item.title, item.content, item.negative_prompt)).map((item) => ({ id: item.id, type: "prompt", title: item.title, content_preview: item.content }));
+}
+
 async function doSearch(q) {
   loading.value = true;
   searched.value = true;
   try {
+    await initLocalImport();
     const data = await apiFetch(`/api/search?q=${encodeURIComponent(q)}&type=${searchType.value}`);
-    results.value = data.results || [];
+    results.value = [...localSearch(q), ...(data.results || [])];
   } catch {
-    results.value = [];
+    results.value = localSearch(q);
   } finally {
     loading.value = false;
   }

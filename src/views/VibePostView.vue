@@ -9,8 +9,8 @@
     <article v-else class="post-detail">
       <div class="detail-header">
         <button class="btn-back" @click="router.push('/vibe')">← 返回</button>
-        <div class="header-actions" v-if="isAdmin">
-          <button class="btn-action" @click="editing = !editing">{{ editing ? '取消' : '编辑' }}</button>
+        <div class="header-actions" v-if="isAdmin || isLocalId(route.params.id)">
+          <button v-if="isAdmin && !isLocalId(route.params.id)" class="btn-action" @click="editing = !editing">{{ editing ? '取消' : '编辑' }}</button>
           <button class="btn-action danger" @click="delConfirm = true">删除</button>
         </div>
       </div>
@@ -83,7 +83,8 @@
           <div v-for="(f, i) in post.files" :key="i" class="file-row">
             <span class="file-name">📄 {{ f.name }}</span>
             <span class="file-size" v-if="f.size">{{ formatSize(f.size) }}</span>
-            <a :href="f.url" class="btn-dl" download>↓</a>
+            <a v-if="!isLocalId(route.params.id)" :href="f.url" class="btn-dl" download>↓</a>
+            <button v-else class="btn-dl" @click="downloadLocalFile(f)">↓</button>
           </div>
         </div>
       </template>
@@ -122,6 +123,7 @@ import { useUser } from "../stores/user.js";
 import { compressToJpeg } from "../lib/upload.js";
 import ModuleNav from "../components/ModuleNav.vue";
 import SearchOverlay from "../components/SearchOverlay.vue";
+import { deleteLocalRecord, downloadLocalFile, getLocalRecord, isLocalId } from "../lib/localImport.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -162,6 +164,12 @@ async function fetchPost() {
   loading.value = true;
   error.value = "";
   try {
+    if (isLocalId(route.params.id)) {
+      const local = await getLocalRecord(route.params.id);
+      if (!local) throw new Error("找不到本地 Vibe");
+      post.value = { ...local, images: local.images || [], files: local.files || [] };
+      return;
+    }
     const data = await apiFetch("/api/vibe/" + route.params.id);
     post.value = data;
   } catch (e) {
@@ -291,7 +299,8 @@ async function saveEdit() {
 async function doDelete() {
   deleting.value = true;
   try {
-    await apiFetch("/api/admin/vibe/" + route.params.id, { method: "DELETE" });
+    if (isLocalId(route.params.id)) await deleteLocalRecord(route.params.id);
+    else await apiFetch("/api/admin/vibe/" + encodeURIComponent(route.params.id), { method: "DELETE" });
     router.push("/vibe");
   } catch (e) {
     error.value = e.message || "删除失败";

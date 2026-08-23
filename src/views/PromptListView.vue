@@ -4,8 +4,8 @@
 
     <div class="module-header">
       <h2>提示词</h2>
-      <div v-if="isAdmin" class="header-actions">
-        <button class="btn-new" @click="openEditor(null)">+ 新建</button>
+      <div v-if="canEdit" class="header-actions">
+        <button v-if="isAdmin" class="btn-new" @click="openEditor(null)">+ 新建</button>
         <button class="btn-edit" :class="{ active: editMode }" @click="editMode = !editMode; selected = []">{{ editMode ? "完成" : "编辑" }}</button>
       </div>
     </div>
@@ -22,7 +22,7 @@
           <div class="card-prompt">{{ p.content_preview }}</div>
           <div class="card-meta">{{ p.image_count || 0 }} 张例图 · {{ formatDate(p.created_at) }}</div>
         </div>
-        <button v-if="isAdmin && editMode" class="select-dot" :class="{ on: selected.includes(p.id) }" @click.stop="toggleSelect(p.id)"></button>
+        <button v-if="canEdit && editMode && (isAdmin || isLocalId(p.id))" class="select-dot" :class="{ on: selected.includes(p.id) }" @click.stop="toggleSelect(p.id)"></button>
       </div>
     </div>
 
@@ -30,7 +30,7 @@
       <div class="skeleton-strip"></div>
     </div>
 
-    <div v-if="isAdmin && editMode && selected.length" class="batch-bar">
+    <div v-if="canEdit && editMode && selected.length" class="batch-bar">
       <button class="btn-outline" @click="deleteSelected">删除选中 ({{ selected.length }})</button>
     </div>
 
@@ -68,13 +68,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { apiFetch } from "../lib/api.js";
 import { useUser } from "../stores/user.js";
 import { compressToJpeg } from "../lib/upload.js";
 import ModuleNav from "../components/ModuleNav.vue";
 import SearchOverlay from "../components/SearchOverlay.vue";
+import { initLocalImport, localState, isLocalId, deleteLocalRecord } from "../lib/localImport.js";
 
 const router = useRouter();
 const { isAdmin } = useUser();
@@ -87,6 +88,7 @@ const hasMore = ref(false);
 const error = ref("");
 const sentinelRef = ref(null);
 const searchOpen = ref(false);
+const canEdit = computed(() => isAdmin.value || localState().prompts.length > 0);
 
 const selected = ref([]);
 const editMode = ref(false);
@@ -108,8 +110,9 @@ async function fetchPosts() {
   error.value = "";
   try {
     const data = await apiFetch("/api/prompts?limit=20&offset=0");
-    posts.value = data.posts || [];
-    postsTotal.value = data.total || 0;
+    await initLocalImport();
+    posts.value = [...localState().prompts, ...(data.posts || [])];
+    postsTotal.value = (data.total || 0) + localState().prompts.length;
     hasMore.value = posts.value.length < postsTotal.value;
   } catch (e) {
     error.value = e.message || "????";
@@ -134,7 +137,7 @@ async function loadMore() {
 }
 
 function goPost(p) {
-  router.push("/prompts/" + p.id);
+  router.push("/prompts/" + encodeURIComponent(p.id));
 }
 
 function toggleSelect(id) {
@@ -147,7 +150,8 @@ async function deleteSelected() {
   if (!confirm("确定删除 " + selected.value.length + " 个帖子？")) return;
   try {
     for (const id of selected.value) {
-      await apiFetch("/api/admin/prompts/" + id, { method: "DELETE", silent: true });
+      if (isLocalId(id)) await deleteLocalRecord(id);
+      else if (isAdmin.value) await apiFetch("/api/admin/prompts/" + encodeURIComponent(id), { method: "DELETE", silent: true });
     }
     selected.value = [];
     await fetchPosts();
@@ -273,7 +277,10 @@ async function save() {
 }
 
 let observer = null;
+function onLocalChanged() { fetchPosts(); }
+
 onMounted(() => {
+  window.addEventListener("nai-gallery:local-changed", onLocalChanged);
   fetchPosts();
   nextTick(() => {
     if (sentinelRef.value) {
@@ -284,7 +291,10 @@ onMounted(() => {
     }
   });
 });
-onBeforeUnmount(() => { if (observer) observer.disconnect(); });
+onBeforeUnmount(() => {
+  window.removeEventListener("nai-gallery:local-changed", onLocalChanged);
+  if (observer) observer.disconnect();
+});
 </script>
 
 <style scoped>

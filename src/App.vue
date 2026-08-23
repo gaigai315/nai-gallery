@@ -7,6 +7,7 @@
       </Transition>
     </router-view>
     <Toast />
+    <LocalImportDialog />
   </div>
 </template>
 
@@ -15,6 +16,8 @@ import { onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import GlassNav from "./components/GlassNav.vue";
 import Toast from "./components/Toast.vue";
+import LocalImportDialog from "./components/LocalImportDialog.vue";
+import { initLocalImport } from "./lib/localImport.js";
 import { useUser } from "./stores/user.js";
 import { useTheme } from "./stores/theme.js";
 
@@ -36,6 +39,7 @@ watch([isLoggedIn, isAdmin], ([loggedIn, admin]) => {
 });
 
 onMounted(async () => {
+  await initLocalImport();
   document.documentElement.setAttribute("data-theme", theme.value);
   await fetchMe();
   ready = true;

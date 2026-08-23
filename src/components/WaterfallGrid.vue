@@ -8,7 +8,7 @@
     >
       <img :src="card.cover" :alt="card.batch_name" loading="lazy" />
       <button
-        v-if="isAdmin"
+        v-if="isAdmin || (allowLocalDelete && String(card.batch_id || '').startsWith('local:'))"
         class="card-delete-btn"
         title="删除此批次"
         @click.stop="$emit('delete', card)"
@@ -23,6 +23,7 @@
 defineProps({
   cards: { type: Array, default: () => [] },
   isAdmin: { type: Boolean, default: false },
+  allowLocalDelete: { type: Boolean, default: false },
 });
 
 defineEmits(["unlock", "delete"]);

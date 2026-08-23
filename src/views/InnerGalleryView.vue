@@ -73,13 +73,15 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
+import { getLocalRecord, isLocalId } from "../lib/localImport.js";
 import { apiFetch } from "../lib/api.js";
 import ImageGrid from "../components/ImageGrid.vue";
 import FlipBook from "../components/FlipBook.vue";
 import DetailView from "../components/DetailView.vue";
 
 const route = useRoute();
+const router = useRouter();
 const batchName = ref("");
 const batchNotes = ref("");
 const images = ref([]);
@@ -115,6 +117,20 @@ async function fetchGallery(opts = {}) {
   const offset = opts.offset ?? 0;
 
   try {
+    if (isLocalId(route.params.batchId)) {
+      const local = await getLocalRecord(route.params.batchId);
+      if (!local) throw new Error("找不到本地画廊");
+      batchName.value = local.batch_name || "本地导入";
+      batchNotes.value = local.notes || "仅保存在当前浏览器";
+      total.value = local.images?.length || 0;
+      groupsData.value = [];
+      images.value = local.images || [];
+      if (route.query.image) {
+        const target = images.value.find((img) => img.image_id === route.query.image);
+        if (target) setTimeout(() => openDetail(target, null), 100);
+      }
+      return;
+    }
     const data = await apiFetch(
       `/api/gallery/${encodeURIComponent(route.params.batchId)}?limit=${limit}&offset=${offset}`
     );
@@ -174,6 +190,11 @@ function navigateInGroup(dir) {
 }
 
 async function handleDownload(image, asset = "image") {
+  if (isLocalId(image?.batch_id)) {
+    const url = image.download_url || image.preview_url;
+    if (url) { const a = document.createElement("a"); a.href = url; a.download = image.image_id || "image"; a.click(); }
+    return;
+  }
   try {
     const data = await apiFetch("/api/download", {
       method: "POST",
@@ -197,6 +218,7 @@ async function handleDownload(image, asset = "image") {
 }
 
 async function handleFavorite(image) {
+  if (isLocalId(image?.batch_id)) return;
   const newState = !image.is_favorite;
   try {
     await apiFetch("/api/favorite", {
