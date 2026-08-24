@@ -1,46 +1,79 @@
-﻿<template>
+<template>
   <div class="waterfall-container" v-if="cards.length">
-    <div
-      v-for="(card, i) in cards"
-      :key="card.batch_id || i"
-      class="waterfall-card"
-      @click="$emit('unlock', card)"
-    >
-      <img :src="card.cover" :alt="card.batch_name" loading="lazy" />
-      <button
-        v-if="isAdmin || (allowLocalDelete && String(card.batch_id || '').startsWith('local:'))"
-        class="card-delete-btn"
-        title="删除此批次"
-        @click.stop="$emit('delete', card)"
+    <div v-for="(col, ci) in columns" :key="'col-' + ci" class="waterfall-column">
+      <div
+        v-for="(card, i) in col"
+        :key="card.batch_id || ci + '-' + i"
+        class="waterfall-card"
+        @click="$emit('unlock', card)"
       >
-        <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
-      </button>
+        <img :src="card.cover" :alt="card.batch_name" loading="lazy" />
+        <button
+          v-if="isAdmin || (allowLocalDelete && String(card.batch_id || '').startsWith('local:'))"
+          class="card-delete-btn"
+          title="删除此批次"
+          @click.stop="$emit('delete', card)"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-defineProps({
+import { ref, computed, onMounted, onUnmounted } from "vue";
+
+const props = defineProps({
   cards: { type: Array, default: () => [] },
   isAdmin: { type: Boolean, default: false },
   allowLocalDelete: { type: Boolean, default: false },
 });
 
 defineEmits(["unlock", "delete"]);
+
+const columnCount = ref(3);
+
+function updateColumnCount() {
+  const w = window.innerWidth;
+  columnCount.value = w >= 1800 ? 4 : w <= 1024 ? 2 : 3;
+}
+
+const columns = computed(() => {
+  const cols = Array.from({ length: columnCount.value }, () => []);
+  props.cards.forEach((card, i) => {
+    cols[i % columnCount.value].push(card);
+  });
+  return cols;
+});
+
+onMounted(() => {
+  updateColumnCount();
+  window.addEventListener("resize", updateColumnCount);
+});
+
+onUnmounted(() => window.removeEventListener("resize", updateColumnCount));
 </script>
 
 <style scoped>
 .waterfall-container {
-  column-count: 3;
-  column-gap: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px;
 }
 
+.waterfall-column {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 .waterfall-card {
-  break-inside: avoid;
-  margin-bottom: 24px;
   border-radius: 20px;
   overflow: hidden;
   cursor: pointer;
@@ -85,21 +118,18 @@ defineEmits(["unlock", "delete"]);
 }
 
 @media (max-width: 1024px) {
-  .waterfall-container { column-count: 2; column-gap: 16px; }
-  .waterfall-card { margin-bottom: 20px; }
+  .waterfall-container { gap: 16px; }
+  .waterfall-column { gap: 20px; }
 }
 
 @media (min-width: 1800px) {
-  .waterfall-container { column-count: 4; column-gap: 20px; }
+  .waterfall-container { gap: 20px; }
 }
 
 @media (max-width: 768px) {
-  .waterfall-container {
-    column-count: 2;
-    column-gap: 12px;
-    padding: 0 12px;
-  }
-  .waterfall-card { margin-bottom: 16px; border-radius: 16px; }
+  .waterfall-container { gap: 12px; padding: 0 12px; }
+  .waterfall-column { gap: 16px; }
+  .waterfall-card { border-radius: 16px; }
   .waterfall-card img { max-height: 300px; }
 }
 </style>

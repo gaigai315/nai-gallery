@@ -22,9 +22,6 @@
     <button v-if="showEditBtn" class="view-circle edit-toggle" :class="{ active: editMode }" :title="editMode ? '退出编辑模式' : '编辑模式'" @click="$emit('toggleEdit')">
       <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
     </button>
-    <button class="view-circle" title="导入本地 ZIP" @click="openLocalImport">
-      <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14" /></svg>
-    </button>
     <button class="view-circle" title="搜索" @click="$emit('openSearch')">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
     </button>
@@ -34,7 +31,6 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { useRoute } from "vue-router";
-import { openLocalImport } from "../lib/localImport.js";
 
 defineProps({
   isTarot: { type: Boolean, default: false },

@@ -7,6 +7,17 @@
       @openSearch="searchOpen = true"
     />
 
+    <div v-if="!loading && !error" class="gallery-tabs">
+      <div class="gallery-segment">
+        <button :class="{ active: galleryTab === 'public' }" @click="galleryTab = 'public'">公开</button>
+        <button :class="{ active: galleryTab === 'local' }" @click="galleryTab = 'local'">本地</button>
+      </div>
+      <button v-if="galleryTab === 'local'" class="local-import-btn" title="导入本地 ZIP" @click="openLocalImport">
+        <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14" /></svg>
+        导入本地 ZIP
+      </button>
+    </div>
+
     <div v-if="loading" class="gallery-status">
       <div class="skeleton-strip"></div>
       <div class="skeleton-strip short"></div>
@@ -18,7 +29,7 @@
     </div>
 
     <div v-else-if="!batchCards.length" class="gallery-status">
-      <p class="status-empty">暂无可用批次。</p>
+      <p class="status-empty">{{ galleryTab === 'local' ? '暂无本地导入。' : '暂无可用批次。' }}</p>
     </div>
 
     <template v-else>
@@ -94,7 +105,9 @@ const { isAdmin } = useUser();
 const isTarot = ref(localStorage.getItem('gallery_view') !== 'grid');
 const sealVisible = ref(false);
 const selectedBatch = ref(null);
-const batchCards = ref([]);
+const galleryTab = ref('public');
+const publicCards = ref([]);
+const localCards = ref([]);
 const loading = ref(true);
 const error = ref("");
 const tooltipRef = ref(null);
@@ -107,6 +120,8 @@ const announcements = ref([]);
 const deleteTarget = ref(null);
 const deleting = ref(false);
 const deleteError = ref("");
+
+const batchCards = computed(() => galleryTab.value === 'local' ? localCards.value : publicCards.value);
 
 function formatDate(iso) {
   if (!iso) return "";
@@ -134,8 +149,10 @@ async function fetchBatches() {
   try {
     const data = await apiFetch("/api/my-unlocks");
     await initLocalImport();
-    const local = localState().gallery.map((b) => ({ ...b, cover_url: b.cover, unlocked_at: true }));
-    batchCards.value = [...(data.batches || []).map((b) => ({ ...b, cover: b.cover_url || "" })), ...local];
+    publicCards.value = (data.batches || []).map((b) => ({ ...b, cover: b.cover_url || "" }));
+    localCards.value = localState().gallery
+      .map((b) => ({ ...b, cover_url: b.cover, unlocked_at: true }))
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
   } catch (e) {
     error.value = e.message || "加载批次失败";
   } finally {
@@ -160,10 +177,10 @@ function handleUnlocked(batch) {
   sealVisible.value = false;
   // Update local state so the batch card reflects the unlock immediately,
   // avoiding a re-prompt when the user returns to the gallery view.
-  const idx = batchCards.value.findIndex((b) => b.batch_id === batch?.batch_id);
+  const idx = publicCards.value.findIndex((b) => b.batch_id === batch?.batch_id);
   if (idx !== -1) {
-    batchCards.value[idx] = {
-      ...batchCards.value[idx],
+    publicCards.value[idx] = {
+      ...publicCards.value[idx],
       unlocked_at: new Date().toISOString(),
     };
   }
@@ -184,10 +201,11 @@ async function doDelete() {
   try {
     if (isLocalId(deleteTarget.value.batch_id)) {
       await deleteLocalRecord(deleteTarget.value.batch_id);
+      localCards.value = localCards.value.filter((b) => b.batch_id !== deleteTarget.value.batch_id);
     } else {
       await apiFetch("/api/admin/batches/" + encodeURIComponent(deleteTarget.value.batch_id), { method: "DELETE" });
+      publicCards.value = publicCards.value.filter((b) => b.batch_id !== deleteTarget.value.batch_id);
     }
-    batchCards.value = batchCards.value.filter((b) => b.batch_id !== deleteTarget.value.batch_id);
     deleteTarget.value = null;
   } catch (e) {
     deleteError.value = e.message || "删除失败";
@@ -254,6 +272,60 @@ onUnmounted(() => {
   padding-top: 0;
   padding-bottom: 100px;
 }
+
+.gallery-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: -8px 0 24px;
+  flex-wrap: wrap;
+}
+
+.gallery-segment {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 4px;
+}
+
+.gallery-segment button {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 6px 20px;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 13px;
+  letter-spacing: 1px;
+  opacity: 0.5;
+  transition: opacity 0.3s, background 0.3s;
+}
+
+.gallery-segment button.active {
+  opacity: 1;
+  background: var(--glass-border);
+  font-weight: bold;
+}
+
+.local-import-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.3s;
+}
+
+.local-import-btn:hover { background: var(--glass-border); }
+.local-import-btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.5; fill: none; }
 
 .gallery-status {
   display: flex;
