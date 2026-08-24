@@ -79,34 +79,41 @@ export async function onRequestGet({ request, env }) {
     const guilds = await guildsResp.json();
     const userGuildIds = new Set((Array.isArray(guilds) ? guilds : []).map(g => g.id));
 
-    const serverBlacklist = blacklist.filter(g => !g.role_id);
-    const roleBlacklist = blacklist.filter(g => g.role_id);
-    if (serverBlacklist.some(g => userGuildIds.has(g.guild_id))) {
-      return Response.redirect(`${baseUrl}/`, 302);
-    }
-    for (const rule of roleBlacklist) {
-      if (!userGuildIds.has(rule.guild_id)) continue;
-      const roles = await fetchMemberRoles(token.access_token, rule.guild_id);
-      if (roles.includes(rule.role_id)) {
-        return Response.redirect(`${baseUrl}/`, 302);
-      }
-    }
-
+    // A whitelist match takes priority: it exempts the user from the
+    // server/role blacklist checks below. Individual user bans (the blacklist
+    // table) are still checked earlier and always win.
+    let whitelisted = false;
     if (whitelist.length) {
       const serverWhitelist = whitelist.filter(g => !g.role_id);
       const roleWhitelist = whitelist.filter(g => g.role_id);
-      let allowed = serverWhitelist.some(g => userGuildIds.has(g.guild_id));
-      if (!allowed) {
+      whitelisted = serverWhitelist.some(g => userGuildIds.has(g.guild_id));
+      if (!whitelisted) {
         for (const rule of roleWhitelist) {
           if (!userGuildIds.has(rule.guild_id)) continue;
           const roles = await fetchMemberRoles(token.access_token, rule.guild_id);
           if (roles.includes(rule.role_id)) {
-            allowed = true;
+            whitelisted = true;
             break;
           }
         }
       }
-      if (!allowed) {
+    }
+
+    if (!whitelisted) {
+      const serverBlacklist = blacklist.filter(g => !g.role_id);
+      const roleBlacklist = blacklist.filter(g => g.role_id);
+      if (serverBlacklist.some(g => userGuildIds.has(g.guild_id))) {
+        return Response.redirect(`${baseUrl}/`, 302);
+      }
+      for (const rule of roleBlacklist) {
+        if (!userGuildIds.has(rule.guild_id)) continue;
+        const roles = await fetchMemberRoles(token.access_token, rule.guild_id);
+        if (roles.includes(rule.role_id)) {
+          return Response.redirect(`${baseUrl}/`, 302);
+        }
+      }
+
+      if (whitelist.length) {
         return Response.redirect(`${baseUrl}/?auth=not_in_guild`, 302);
       }
     }

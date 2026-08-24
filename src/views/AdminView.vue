@@ -585,7 +585,7 @@
         <div class="list-toolbar">
           <h3>服务器白名单 / 黑名单</h3>
         </div>
-        <p class="pledge-hint">粘贴 Discord 邀请链接、邀请码或服务器 ID，解析后可加入名单。白名单为空时对服务器不做限制；有白名单时用户必须命中其中一个服务器或身份组；黑名单一票否决。</p>
+        <p class="pledge-hint">粘贴 Discord 邀请链接、邀请码或服务器 ID，解析后可加入名单。白名单为空时对服务器不做限制；有白名单时用户必须命中其中一个服务器或身份组。白名单优先：命中白名单的用户可免除黑名单限制。</p>
         <form class="filter-row" @submit.prevent="resolveGuildInvite">
           <input v-model="guildInvite" class="filter-input" placeholder="例如 https://discord.gg/xxxx、邀请码或服务器 ID" />
           <button class="btn-outline" type="submit" :disabled="guildResolving">{{ guildResolving ? '解析中...' : '解析' }}</button>
