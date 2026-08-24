@@ -26,6 +26,7 @@
         v-if="isTarot"
         :cards="batchCards"
         :isAdmin="isAdmin"
+        :allowLocalDelete="localState().gallery.length > 0"
         @unlock="openSeal"
         @delete="confirmDelete"
       />
@@ -33,6 +34,7 @@
         v-else
         :cards="batchCards"
         :isAdmin="isAdmin"
+        :allowLocalDelete="localState().gallery.length > 0"
         @unlock="openSeal"
         @delete="confirmDelete"
       />
@@ -84,6 +86,7 @@ import PasswordSeal from "../components/PasswordSeal.vue";
 import ModuleNav from '../components/ModuleNav.vue';
 import SearchOverlay from "../components/SearchOverlay.vue";
 import AnnouncementModal from "../components/AnnouncementModal.vue";
+import { initLocalImport, localState, isLocalId, openLocalImport, clearLocalRecords, deleteLocalRecord } from "../lib/localImport.js";
 
 const router = useRouter();
 const { isAdmin } = useUser();
@@ -130,10 +133,9 @@ async function fetchBatches() {
   error.value = "";
   try {
     const data = await apiFetch("/api/my-unlocks");
-    batchCards.value = (data.batches || []).map((b) => ({
-      ...b,
-      cover: b.cover_url || "",
-    }));
+    await initLocalImport();
+    const local = localState().gallery.map((b) => ({ ...b, cover_url: b.cover, unlocked_at: true }));
+    batchCards.value = [...(data.batches || []).map((b) => ({ ...b, cover: b.cover_url || "" })), ...local];
   } catch (e) {
     error.value = e.message || "加载批次失败";
   } finally {
@@ -142,6 +144,10 @@ async function fetchBatches() {
 }
 
 function openSeal(batch) {
+  if (String(batch?.batch_id || "").startsWith("local:")) {
+    router.push('/gallery/' + encodeURIComponent(batch.batch_id));
+    return;
+  }
   if (isAdmin.value || batch?.unlocked_at) {
     router.push('/gallery/' + encodeURIComponent(batch.batch_id));
   } else {
@@ -176,7 +182,11 @@ async function doDelete() {
   deleting.value = true;
   deleteError.value = "";
   try {
-    await apiFetch("/api/admin/batches/" + encodeURIComponent(deleteTarget.value.batch_id), { method: "DELETE" });
+    if (isLocalId(deleteTarget.value.batch_id)) {
+      await deleteLocalRecord(deleteTarget.value.batch_id);
+    } else {
+      await apiFetch("/api/admin/batches/" + encodeURIComponent(deleteTarget.value.batch_id), { method: "DELETE" });
+    }
     batchCards.value = batchCards.value.filter((b) => b.batch_id !== deleteTarget.value.batch_id);
     deleteTarget.value = null;
   } catch (e) {
@@ -201,7 +211,10 @@ function onScroll() {
   scrollTimeout = setTimeout(() => { el.style.opacity = "0"; }, 800);
 }
 
+function onLocalChanged() { fetchBatches(); }
+
 onMounted(() => {
+  window.addEventListener("nai-gallery:local-changed", onLocalChanged);
   fetchBatches();
   checkAnnouncements();
   window.addEventListener("scroll", onScroll);
@@ -230,6 +243,7 @@ async function checkAnnouncements() {
 }
 
 onUnmounted(() => {
+  window.removeEventListener("nai-gallery:local-changed", onLocalChanged);
   window.removeEventListener("scroll", onScroll);
   clearTimeout(scrollTimeout);
 });
