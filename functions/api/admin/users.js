@@ -21,13 +21,23 @@ export async function onRequestGet({ request, env }) {
      FROM blacklist ORDER BY created_at DESC`,
   ).all();
 
-  return json({ users: rows.results || [], blacklist: blocked.results || [] });
+  const allowed = await env.DB.prepare(
+    `SELECT discord_id, note, created_at, created_by
+     FROM whitelist ORDER BY created_at DESC`,
+  ).all();
+
+  return json({
+    users: rows.results || [],
+    blacklist: blocked.results || [],
+    whitelist: allowed.results || [],
+  });
 }
 
 export async function onRequestPost({ request, env }) {
   const auth = await requireAdmin(request, env);
   if (auth.response) return auth.response;
   const body = await request.json().catch(() => ({}));
+  const list = body.list === "whitelist" ? "whitelist" : "blacklist";
   const rawIds = Array.isArray(body.discord_ids)
     ? body.discord_ids
     : (body.discord_id ? [body.discord_id] : []);
@@ -47,26 +57,31 @@ export async function onRequestPost({ request, env }) {
     discordIds.push(id);
   }
   if (!discordIds.length) {
-    return json({ error: selfCount ? "cannot_blacklist_self" : "invalid_discord_id" }, 400);
+    const selfError = list === "whitelist" ? "cannot_whitelist_self" : "cannot_blacklist_self";
+    return json({ error: selfCount ? selfError : "invalid_discord_id" }, 400);
   }
 
+  // "list" is constrained to a fixed enum above, so interpolating the table
+  // name is safe here.
   for (const discordId of discordIds) {
     await env.DB.prepare(
-      `INSERT INTO blacklist (discord_id, note, created_at, created_by)
+      `INSERT INTO ${list} (discord_id, note, created_at, created_by)
        VALUES (?, ?, ?, ?)
        ON CONFLICT(discord_id) DO UPDATE SET note = excluded.note`,
     ).bind(discordId, note, now, auth.session.discord_id).run();
   }
 
-  return json({ ok: true, blacklisted: discordIds.length });
+  const countKey = list === "whitelist" ? "whitelisted" : "blacklisted";
+  return json({ ok: true, [countKey]: discordIds.length });
 }
 
 export async function onRequestDelete({ request, env }) {
   const auth = await requireAdmin(request, env);
   if (auth.response) return auth.response;
   const url = new URL(request.url);
+  const list = url.searchParams.get("list") === "whitelist" ? "whitelist" : "blacklist";
   const discordId = String(url.searchParams.get("discord_id") || "").trim();
   if (!/^\d{17,20}$/.test(discordId)) return json({ error: "invalid_discord_id" }, 400);
-  await env.DB.prepare("DELETE FROM blacklist WHERE discord_id = ?").bind(discordId).run();
+  await env.DB.prepare(`DELETE FROM ${list} WHERE discord_id = ?`).bind(discordId).run();
   return json({ ok: true });
 }

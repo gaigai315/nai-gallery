@@ -541,6 +541,7 @@
                 <button v-if="u.role === 'user'" class="btn-outline small" @click="promoteUser(u.discord_id)">提权</button>
                 <button v-else-if="u.role === 'admin'" class="btn-outline small" @click="demoteUser(u.discord_id)">降权</button>
                 <button class="btn-outline small danger-text" @click="blockUser(u.discord_id)">拉黑</button>
+                <button class="btn-outline small" @click="whitelistUser(u.discord_id)">白名单</button>
               </td>
             </tr>
             <tr v-if="expandedUser === u.discord_id" class="user-downloads-row">
@@ -581,11 +582,32 @@
           </tr></tbody>
         </table>
       </div>
+      <div class="whitelist-panel">
+        <div class="list-toolbar">
+          <h3>个人白名单</h3>
+        </div>
+        <p class="pledge-hint">加入个人白名单的用户，可免除"服务器 / 身份组黑名单"的拦截；个人黑名单仍然绝对生效，无法被豁免。</p>
+        <form class="filter-row blacklist-form" @submit.prevent="addWhitelistedUser">
+          <textarea v-model="whitelistForm.rawIds" class="filter-input blacklist-ids" rows="3" placeholder="输入一个或多个 Discord 用户 ID，用逗号、空格或换行分隔" required></textarea>
+          <input v-model="whitelistForm.note" class="filter-input" placeholder="备注（可选，批量时共用）" />
+          <button class="btn-danger" type="submit" :disabled="whitelistSaving">{{ whitelistSaving ? '处理中...' : '加入白名单' }}</button>
+        </form>
+        <p v-if="whitelistError" class="status-error">{{ whitelistError }}</p>
+        <p v-if="whitelistSuccess" class="status-ok">{{ whitelistSuccess }}</p>
+        <div v-if="!whitelist.length" class="empty-state"><p>暂无白名单用户</p></div>
+        <table v-else class="data-table">
+          <thead><tr><th>Discord ID</th><th>备注</th><th>加入时间</th><th>操作</th></tr></thead>
+          <tbody><tr v-for="w in whitelist" :key="w.discord_id">
+            <td>{{ w.discord_id }}</td><td>{{ w.note || '—' }}</td><td>{{ formatDate(w.created_at) }}</td>
+            <td><button class="btn-outline small" @click="unwhitelistUser(w.discord_id)">移除白名单</button></td>
+          </tr></tbody>
+        </table>
+      </div>
       <div class="guild-access-panel">
         <div class="list-toolbar">
           <h3>服务器白名单 / 黑名单</h3>
         </div>
-        <p class="pledge-hint">粘贴 Discord 邀请链接、邀请码或服务器 ID，解析后可加入名单。白名单为空时对服务器不做限制；有白名单时用户必须命中其中一个服务器或身份组。白名单优先：命中白名单的用户可免除黑名单限制。</p>
+        <p class="pledge-hint">粘贴 Discord 邀请链接、邀请码或服务器 ID，解析后可加入名单。服务器黑名单优先：命中黑名单即拦截（除非该用户在"个人白名单"中）。服务器白名单为空时不限制；有白名单时用户必须命中其中一个服务器或身份组。</p>
         <form class="filter-row" @submit.prevent="resolveGuildInvite">
           <input v-model="guildInvite" class="filter-input" placeholder="例如 https://discord.gg/xxxx、邀请码或服务器 ID" />
           <button class="btn-outline" type="submit" :disabled="guildResolving">{{ guildResolving ? '解析中...' : '解析' }}</button>
@@ -879,6 +901,11 @@ const blacklistForm = ref({ rawIds: '', note: '' });
 const blacklistSaving = ref(false);
 const blacklistError = ref('');
 const blacklistSuccess = ref('');
+const whitelist = ref([]);
+const whitelistForm = ref({ rawIds: '', note: '' });
+const whitelistSaving = ref(false);
+const whitelistError = ref('');
+const whitelistSuccess = ref('');
 const usersLoading = ref(false);
 const usersError = ref('');
 const guildAccess = reactive({ whitelist: [], blacklist: [] });
@@ -1783,6 +1810,7 @@ async function fetchUsers() {
     const data = await apiFetch('/api/admin/users');
     users.value = data.users || [];
     blacklist.value = data.blacklist || [];
+    whitelist.value = data.whitelist || [];
   } catch (e) {
     users.value = [];
     usersError.value = e.message || '用户列表加载失败';
@@ -1846,6 +1874,52 @@ async function unblockUser(discordId) {
     await fetchUsers();
   } catch (e) {
     blacklistError.value = e.message || '解除拉黑失败';
+  }
+}
+async function addWhitelistedUser() {
+  whitelistSaving.value = true;
+  whitelistError.value = '';
+  whitelistSuccess.value = '';
+  const rawIds = String(whitelistForm.value.rawIds || '').trim();
+  const discordIds = [...new Set(rawIds.split(/[\s,，;；]+/).map(s => s.trim()).filter(Boolean))];
+  if (!discordIds.length) {
+    whitelistError.value = '请输入至少一个 Discord 用户 ID';
+    whitelistSaving.value = false;
+    return;
+  }
+  const invalid = discordIds.filter(id => !/^\d{17,20}$/.test(id));
+  if (invalid.length) {
+    whitelistError.value = `以下不是有效的 Discord ID：${invalid.join('、')}`;
+    whitelistSaving.value = false;
+    return;
+  }
+  try {
+    const data = await apiFetch('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({ list: 'whitelist', discord_ids: discordIds, note: whitelistForm.value.note || '' }),
+    });
+    whitelistForm.value = { rawIds: '', note: '' };
+    await fetchUsers();
+    whitelistSuccess.value = `已加入 ${data?.whitelisted ?? discordIds.length} 个用户`;
+  } catch (e) {
+    whitelistError.value = e.message || '加入白名单失败';
+  } finally {
+    whitelistSaving.value = false;
+  }
+}
+async function whitelistUser(discordId) {
+  if (!confirm('确定将该用户加入个人白名单吗？他将免除服务器/身份组黑名单的拦截。')) return;
+  whitelistForm.value = { rawIds: discordId, note: '' };
+  await addWhitelistedUser();
+}
+async function unwhitelistUser(discordId) {
+  if (!confirm('确定将该用户移出个人白名单吗？')) return;
+  whitelistSuccess.value = '';
+  try {
+    await apiFetch('/api/admin/users?list=whitelist&discord_id=' + encodeURIComponent(discordId), { method: 'DELETE' });
+    await fetchUsers();
+  } catch (e) {
+    whitelistError.value = e.message || '移除白名单失败';
   }
 }
 async function promoteUser(discordId) {
@@ -2344,6 +2418,7 @@ function copyToClipboard(text) {
 .filter-input:focus { outline: none; border-color: var(--secondary); }
 .filter-input::placeholder { opacity: 0.4; }
 .blacklist-form .blacklist-ids { flex: 1 1 100%; min-width: 100%; resize: vertical; line-height: 1.5; }
+.whitelist-panel { margin-top: 32px; }
 
 /* 新密码显示 */
 .new-pwd-display { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--glass-bg); border-radius: 10px; border: 1px solid var(--glass-border); font-size: 13px; }

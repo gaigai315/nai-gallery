@@ -27,6 +27,13 @@ export async function isBlacklisted(env, discordId) {
   return Boolean(row);
 }
 
+export async function isWhitelisted(env, discordId) {
+  const row = await env.DB.prepare("SELECT 1 AS allowed FROM whitelist WHERE discord_id = ? LIMIT 1")
+    .bind(discordId)
+    .first();
+  return Boolean(row);
+}
+
 export async function hasUnlock(env, discordId, batchId) {
   const row = await env.DB.prepare(
     "SELECT 1 AS ok FROM user_batch_unlocks WHERE discord_id = ? AND batch_id = ? LIMIT 1",
