@@ -5,6 +5,7 @@ import {
   GUILD_WHITELIST_KEY,
   GUILD_BLACKLIST_KEY,
   readGuildList,
+  fetchUserGuilds,
   fetchMemberRoles,
 } from "../../_lib/guild-access.js";
 
@@ -70,14 +71,11 @@ export async function onRequestGet({ request, env }) {
   const hasGuildAccessRules = whitelist.length > 0 || blacklist.length > 0;
 
   if (hasGuildAccessRules) {
-    const guildsResp = await fetch("https://discord.com/api/users/@me/guilds", {
-      headers: { Authorization: `Bearer ${token.access_token}` },
-    });
-    if (!guildsResp.ok) {
+    const guilds = await fetchUserGuilds(token.access_token);
+    if (!guilds) {
       return Response.redirect(`${baseUrl}/?auth=failed`, 302);
     }
-    const guilds = await guildsResp.json();
-    const userGuildIds = new Set((Array.isArray(guilds) ? guilds : []).map(g => g.id));
+    const userGuildIds = new Set(guilds.map(g => g.id));
 
     // A whitelist match takes priority: it exempts the user from the
     // server/role blacklist checks below. Individual user bans (the blacklist
@@ -91,7 +89,7 @@ export async function onRequestGet({ request, env }) {
         for (const rule of roleWhitelist) {
           if (!userGuildIds.has(rule.guild_id)) continue;
           const roles = await fetchMemberRoles(token.access_token, rule.guild_id);
-          if (roles.includes(rule.role_id)) {
+          if (Array.isArray(roles) && roles.includes(rule.role_id)) {
             whitelisted = true;
             break;
           }
@@ -108,6 +106,11 @@ export async function onRequestGet({ request, env }) {
       for (const rule of roleBlacklist) {
         if (!userGuildIds.has(rule.guild_id)) continue;
         const roles = await fetchMemberRoles(token.access_token, rule.guild_id);
+        if (roles === null) {
+          // Could not verify this guild's roles; fail closed so a blacklisted
+          // role cannot slip through on a transient API error.
+          return Response.redirect(`${baseUrl}/`, 302);
+        }
         if (roles.includes(rule.role_id)) {
           return Response.redirect(`${baseUrl}/`, 302);
         }
