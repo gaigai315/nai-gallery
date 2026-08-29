@@ -310,7 +310,7 @@ export async function uploadBatch(batchId, entries, groups, onProgress, format =
       txt_key: (e.txtFile && slot?.txt?.key) ? slot.txt.key : null,
       prompt_preview: (e.meta?.positive_prompt || e.baseName).slice(0, 2048),
       seed: e.meta?.seed || null,
-      metadata: e.meta?.raw || null,
+      metadata: e.meta?.stored || e.meta?.raw || null,
       width: e.width || e.meta?.width || null,
       height: e.height || e.meta?.height || null,
       created_at: new Date(baseTs + idx).toISOString(),

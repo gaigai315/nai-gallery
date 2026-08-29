@@ -30,9 +30,18 @@
             {{ image?.negative_prompt || "" }}
           </div>
         </div>
-        <div class="prompt-section" v-if="paramsStr">
+        <div class="prompt-section" v-if="parameterRows.length">
           <div class="prompt-title">PARAMETERS</div>
-          <div class="prompt-box">{{ paramsStr }}</div>
+          <div class="parameter-grid">
+            <div v-for="row in parameterRows" :key="row.label" class="parameter-row">
+              <span>{{ row.label }}</span>
+              <strong>{{ row.value }}</strong>
+            </div>
+          </div>
+          <details v-if="rawMetadata" class="raw-parameters">
+            <summary>RAW PARAMETERS</summary>
+            <pre>{{ rawMetadata }}</pre>
+          </details>
         </div>
       </div>
       <div class="action-bar">
@@ -57,6 +66,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { formatNaiRawMetadata, getNaiParameterRows } from "../lib/nai-parameters.js";
 
 const props = defineProps({
   visible: Boolean,
@@ -72,8 +82,6 @@ const groupIndex = computed(() => {
   return groupImages.value.findIndex(i => i.image_id === props.image.image_id);
 });
 const groupSize = computed(() => groupImages.value.length);
-const ICON_COPY_UNUSED = "copy";
-
 const ICON_COPY = "M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z";
 const ICON_CHECK = "M5 13l4 4L19 7";
 const posShimmer = ref(false);
@@ -83,13 +91,9 @@ const negCopyLabel = ref("Copy Neg");
 const posCopyIcon = ref(ICON_COPY);
 const negCopyIcon = ref(ICON_COPY);
 
-const paramsStr = computed(() => {
-  const m = props.image?.metadata;
-  if (!m) return "";
-  return Object.entries(typeof m === "string" ? JSON.parse(m) : m)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join(" · ");
-});
+const metadataSource = computed(() => props.image?.metadata || props.image?.params || null);
+const parameterRows = computed(() => getNaiParameterRows(metadataSource.value, props.image || {}));
+const rawMetadata = computed(() => formatNaiRawMetadata(metadataSource.value));
 
 function close() { emit("close"); }
 
@@ -230,6 +234,46 @@ function copyPrompt(side) {
 [data-theme="dark"] .prompt-box { background: rgba(255,255,255,0.03); }
 .prompt-box.positive { color: var(--prompt-positive); }
 .prompt-box.negative { color: var(--prompt-negative); }
+
+.parameter-grid {
+  border-top: 1px solid var(--glass-border);
+}
+.parameter-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(100px, 1.2fr);
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--glass-border);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.parameter-row span { opacity: 0.55; }
+.parameter-row strong {
+  min-width: 0;
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.raw-parameters { margin-top: 12px; }
+.raw-parameters summary {
+  cursor: pointer;
+  font-size: 10px;
+  letter-spacing: 1px;
+  opacity: 0.55;
+}
+.raw-parameters pre {
+  max-height: 280px;
+  margin-top: 10px;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  background: rgba(0,0,0,0.03);
+  font: 11px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+[data-theme="dark"] .raw-parameters pre { background: rgba(255,255,255,0.03); }
 
 .shimmer {
   position: absolute; top: 0; left: -100%; width: 50%; height: 100%;

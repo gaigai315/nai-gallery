@@ -237,6 +237,19 @@
           <p class="prompt-text">{{ entryById(expandedId)?.meta?.positive_prompt || '(无)' }}</p>
           <h4>负面提示词</h4>
           <p class="prompt-text">{{ entryById(expandedId)?.meta?.negative_prompt || '(无)' }}</p>
+          <template v-if="expandedParameterRows.length">
+            <h4>生成参数</h4>
+            <div class="upload-parameter-grid">
+              <div v-for="row in expandedParameterRows" :key="row.label" class="upload-parameter-row">
+                <span>{{ row.label }}</span>
+                <strong>{{ row.value }}</strong>
+              </div>
+            </div>
+          </template>
+          <details v-if="expandedRawMetadata" class="upload-raw-parameters">
+            <summary>原始参数 JSON</summary>
+            <pre>{{ expandedRawMetadata }}</pre>
+          </details>
         </div>
 
         <!-- 进度 + 提交 -->
@@ -885,6 +898,7 @@
 import { ref, computed, onMounted, reactive } from 'vue';
 import { apiFetch } from '../lib/api.js';
 import { buildUploadPlan, makeThumbnail, uploadBatch, moveEntryToGroup, compressToJpeg, SIGN_FILE_LIMIT } from '../lib/upload.js';
+import { formatNaiRawMetadata, getNaiParameterRows } from '../lib/nai-parameters.js';
 
 const view = ref('list');
 const showMoreMenu = ref(false);
@@ -1589,6 +1603,10 @@ const done = ref(0);
 const total = ref(0);
 
 const entryById = (id) => entries.value.find((e) => e.id === id);
+const expandedEntry = computed(() => entryById(expandedId.value));
+const expandedMetadata = computed(() => expandedEntry.value?.meta?.stored || expandedEntry.value?.meta?.raw || null);
+const expandedParameterRows = computed(() => getNaiParameterRows(expandedMetadata.value, expandedEntry.value || {}));
+const expandedRawMetadata = computed(() => formatNaiRawMetadata(expandedMetadata.value));
 const totalFiles = computed(() => {
   let c = 0;
   for (const e of entries.value) { c++; if (e.thumbBlob) c++; if (e.txtFile) c++; }
@@ -2256,6 +2274,17 @@ function copyToClipboard(text) {
 .prompt-detail-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 500; }
 .prompt-detail h4 { font-size: 12px; opacity: 0.6; margin-top: 10px; margin-bottom: 4px; letter-spacing: 1px; }
 .prompt-text { font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+.upload-parameter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; border-top: 1px solid var(--glass-border); }
+.upload-parameter-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--glass-border); font-size: 12px; }
+.upload-parameter-row span { opacity: 0.55; }
+.upload-parameter-row strong { min-width: 0; font-weight: 500; text-align: right; overflow-wrap: anywhere; }
+.upload-raw-parameters { margin-top: 12px; }
+.upload-raw-parameters summary { cursor: pointer; font-size: 11px; opacity: 0.55; }
+.upload-raw-parameters pre { max-height: 260px; margin-top: 8px; padding: 10px; overflow: auto; border: 1px solid var(--glass-border); border-radius: 6px; font: 11px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (max-width: 680px) {
+  .upload-parameter-grid { grid-template-columns: 1fr; }
+}
 
 .upload-progress { margin: 20px 0; }
 .progress-bar { height: 6px; border-radius: 3px; background: var(--glass-border); overflow: hidden; margin-top: 8px; }

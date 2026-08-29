@@ -111,7 +111,36 @@ function tryParseJson(value) {
   }
 }
 
-function normalizeNaiMeta(raw) {
+function normalizeTextFields(textChunks) {
+  const fields = {};
+  for (const { keyword, value } of textChunks) {
+    const key = keyword.trim();
+    if (!key || key.toLowerCase() === "comment") continue;
+    if (fields[key] == null) {
+      fields[key] = value;
+    } else if (Array.isArray(fields[key])) {
+      fields[key].push(value);
+    } else {
+      fields[key] = [fields[key], value];
+    }
+  }
+  return fields;
+}
+
+function findTextField(textFields, name) {
+  const wanted = name.toLowerCase();
+  const key = Object.keys(textFields).find((candidate) => candidate.toLowerCase() === wanted);
+  const value = key ? textFields[key] : null;
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function buildStoredMetadata(raw, textFields) {
+  const stored = { ...raw };
+  if (Object.keys(textFields).length) stored._png_text = textFields;
+  return stored;
+}
+
+function normalizeNaiMeta(raw, textFields = {}) {
   if (!raw || typeof raw !== "object") return null;
   const hasHint = Object.keys(raw).some((k) => NAI_HINT_KEYS.has(k));
   if (!hasHint) return null;
@@ -125,7 +154,12 @@ function normalizeNaiMeta(raw) {
     noise_schedule: raw.noise_schedule || null,
     width: raw.width != null ? raw.width : null,
     height: raw.height != null ? raw.height : null,
+    title: findTextField(textFields, "title") || null,
+    description: findTextField(textFields, "description") || null,
+    software: findTextField(textFields, "software") || null,
+    source: findTextField(textFields, "source") || null,
     raw,
+    stored: buildStoredMetadata(raw, textFields),
   };
 }
 
@@ -142,6 +176,7 @@ export async function parseNaiPng(file) {
   const bytes = new Uint8Array(buf);
   let commentJson = null;
   let description = null;
+  const textChunks = [];
 
   for (const chunk of iterTextChunks(buf)) {
     const decoded = chunk.type === TYPE_tEXt
@@ -149,6 +184,7 @@ export async function parseNaiPng(file) {
       : decodeItxt(bytes, chunk.dataStart, chunk.dataLen);
     const { keyword, value } = decoded;
     if (!value) continue;
+    textChunks.push({ keyword, value });
     const kwLower = keyword.toLowerCase();
 
     if (kwLower === "comment" && !commentJson) {
@@ -164,16 +200,24 @@ export async function parseNaiPng(file) {
     }
   }
 
+  const textFields = normalizeTextFields(textChunks);
   if (commentJson) {
-    const meta = normalizeNaiMeta(commentJson);
+    const meta = normalizeNaiMeta(commentJson, textFields);
     if (meta) return meta;
   }
   if (description) {
+    const raw = { description };
     return {
       positive_prompt: "", negative_prompt: "",
       seed: null, steps: null, cfg_scale: null,
       sampler: null, noise_schedule: null,
-      width: null, height: null, raw: { description },
+      width: null, height: null,
+      title: findTextField(textFields, "title") || null,
+      description,
+      software: findTextField(textFields, "software") || null,
+      source: findTextField(textFields, "source") || null,
+      raw,
+      stored: buildStoredMetadata(raw, textFields),
     };
   }
   return null;

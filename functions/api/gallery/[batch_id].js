@@ -1,6 +1,16 @@
 import { hasUnlock, isAdmin } from "../../_lib/db.js";
 import { decodePathParam, json, requireSession } from "../../_lib/session.js";
 
+function parseJsonObject(value) {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function onRequestGet({ request, env, params }) {
   try {
   const auth = await requireSession(request, env);
@@ -52,23 +62,28 @@ export async function onRequestGet({ request, env, params }) {
     .all();
 
   const images = (rows.results || []).map((image) => {
+    const metadata = parseJsonObject(image.metadata_json);
+    const groupParams = parseJsonObject(image.params_json);
     let prompt_preview = image.prompt_preview;
-    if (!prompt_preview && image.metadata_json) {
-      try {
-        const meta = JSON.parse(image.metadata_json);
-        prompt_preview = meta.prompt || null;
-      } catch {}
-    }
+    if (!prompt_preview && metadata) prompt_preview = metadata.positive_prompt || metadata.prompt || null;
+    const { metadata_json, params_json, ...publicImage } = image;
     return {
-      ...image,
+      ...publicImage,
+      metadata,
+      params: groupParams,
       prompt_preview: prompt_preview || image.positive_prompt || null,
       preview_url: `/api/preview/${encodeURIComponent(image.image_id)}?batch_id=${encodeURIComponent(batchId)}`,
     };
   });
+
+  const publicGroups = (groups.results || []).map((group) => {
+    const { params_json, ...publicGroup } = group;
+    return { ...publicGroup, params: parseJsonObject(params_json) };
+  });
   return json({
     batch,
     images,
-    groups: groups.results || [],
+    groups: publicGroups,
     total: totalRow?.count || 0,
     offset,
     limit,
