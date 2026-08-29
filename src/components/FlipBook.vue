@@ -3,7 +3,7 @@
     <div class="book" ref="bookRef">
       <div
         v-for="(page, i) in pages"
-        :key="i"
+        :key="page.key"
         class="page"
         :style="pageStyle(i)"
         @click="flipTo(i)"
@@ -16,12 +16,12 @@
         </div>
       </div>
     </div>
-    <div class="book-page-indicator">{{ currentLeaf + 1 }} / {{ totalLeaves }}</div>
+    <div v-if="totalLeaves" class="book-page-indicator">{{ currentLeaf + 1 }} / {{ totalLeaves }}</div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 
 const props = defineProps({
   images: { type: Array, default: () => [] },
@@ -32,19 +32,17 @@ const emit = defineEmits(["open"]);
 const bookRef = ref(null);
 const currentLeaf = ref(0);
 
-const totalLeaves = computed(() => Math.ceil(props.images.length / 2));
+const totalLeaves = computed(() => props.images.length);
 
 const pages = computed(() => {
-  const result = [];
-  for (let i = 0; i < totalLeaves.value; i++) {
-    const front = props.images[i * 2];
-    const back = props.images[i * 2 + 1] || props.images[0];
-    result.push({
-      front: front?.preview_url || front,
-      back: back?.preview_url || back,
-    });
-  }
-  return result;
+  return props.images.map((image, index) => {
+    const preview = image?.preview_url || image;
+    return { key: image?.image_id || index, front: preview, back: preview };
+  });
+});
+
+watch(totalLeaves, (total) => {
+  currentLeaf.value = Math.min(currentLeaf.value, Math.max(0, total - 1));
 });
 
 function pageStyle(i) {
@@ -78,15 +76,11 @@ function pageStyle(i) {
 }
 
 function flipTo(i) {
-  if (i >= currentLeaf.value) {
+  if (i === currentLeaf.value && i < totalLeaves.value - 1) {
     currentLeaf.value = i + 1;
-  } else {
+  } else if (i !== currentLeaf.value) {
     currentLeaf.value = i;
   }
-}
-
-function centerLeaf() {
-  currentLeaf.value = Math.floor(totalLeaves.value / 2);
 }
 
 function onResize() {
@@ -94,7 +88,6 @@ function onResize() {
 }
 
 onMounted(() => {
-  centerLeaf();
   window.addEventListener("resize", onResize);
 });
 
