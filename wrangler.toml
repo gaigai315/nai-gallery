@@ -1,4 +1,4 @@
-﻿name = "nai-private-gallery"
+﻿name = "gaigai315-nai-gallery"
 compatibility_date = "2026-07-22"
 pages_build_output_dir = "dist"
 
@@ -6,7 +6,7 @@ pages_build_output_dir = "dist"
 ##   DISCORD_GUILD_ID, DISCORD_REQUIRED_ROLE_ID (optional — restrict login to guild members / specific role)
 
 ## Secrets & R2 credentials are injected via:
-##   npx wrangler pages secret put <NAME> --project-name nai-private-gallery
+##   npx wrangler pages secret put <NAME> --project-name gaigai315-nai-gallery
 ## (live) or a local `.dev.vars` file for `wrangler pages dev`. Do NOT commit
 ## real secrets to this file. Required secrets:
 ##   DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI,
@@ -16,13 +16,11 @@ pages_build_output_dir = "dist"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "nai-gallery"
-## Run `npx wrangler d1 create nai-gallery` and paste the returned id below,
-## then `npx wrangler d1 execute nai-gallery --remote --file=migrations/0001_initial.sql`:
-database_id = "702e9be7-2685-4e51-a8a6-8f7636f8396c"
+database_name = "gaigai315-nai-gallery-db"
+database_id = "4c291fa8-6b04-4deb-af4a-1b1499407838"
 
 [[r2_buckets]]
 binding = "GALLERY_BUCKET"
-bucket_name = "nai-gallery-bucket"
+bucket_name = "gaigai315-nai-gallery-images"
 ## Browser PUT direct-upload needs CORS on this bucket — apply with
-## `npx wrangler r2 bucket cors put nai-gallery-bucket --file r2-cors.json` (see 部署手册.md).
+## `npx wrangler r2 bucket cors set gaigai315-nai-gallery-images --file r2-cors.json --force` (see 部署手册.md).

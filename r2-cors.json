@@ -5,10 +5,7 @@
           "origins": [
             "http://localhost:5173",
             "http://localhost:8788",
-            "https://nai-gallery.pages.dev",
-            "https://nai-private-gallery-whi.pages.dev",
-            "https://glassgallery.space",
-            "https://www.glassgallery.space"
+            "https://gaigai315-nai-gallery.pages.dev"
           ],
           "methods": ["PUT", "GET", "HEAD"],
           "role": "Writer",
