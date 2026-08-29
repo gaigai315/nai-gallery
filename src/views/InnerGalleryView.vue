@@ -25,16 +25,10 @@
       </div>
     </div>
 
-    <div v-if="groupsData.length" class="group-notes-section">
-      <div v-for="g in groupsData" :key="g.group_id" class="group-note-item">
-        <span class="group-note-title">{{ g.title }}</span>
-        <span v-if="g.notes" class="group-note-text">{{ g.notes }}</span>
-      </div>
-    </div>
-
     <ImageGrid
       v-if="viewMode === 'grid'"
       :images="images"
+      :group-data="groupsData"
       @open="openDetail"
     />
 
@@ -152,11 +146,11 @@ async function fetchGallery(opts = {}) {
       if (targetImage) {
         const groupMap = new Map();
         for (const img of images.value) {
-          const key = img.positive_prompt || img.prompt_preview || img.image_id;
+          const key = img.group_id || img.positive_prompt || img.prompt_preview || img.image_id;
           if (!groupMap.has(key)) groupMap.set(key, { key, images: [] });
           groupMap.get(key).images.push(img);
         }
-        const targetKey = targetImage.positive_prompt || targetImage.prompt_preview || targetImage.image_id;
+        const targetKey = targetImage.group_id || targetImage.positive_prompt || targetImage.prompt_preview || targetImage.image_id;
         const targetGroup = groupMap.get(targetKey) || null;
         setTimeout(() => openDetail(targetImage, targetGroup), 100);
       }
@@ -305,12 +299,6 @@ watch(() => route.params.batchId, () => {
 .gallery-header h1 { font-size: 24px; font-weight: normal; letter-spacing: 4px; margin-bottom: 8px; }
 .batch-notes { font-size: 13px; opacity: 0.5; letter-spacing: 1px; margin-bottom: 8px; max-width: 600px; margin-left: auto; margin-right: auto; }
 .gallery-header p { font-size: 12px; opacity: 0.6; letter-spacing: 2px; }
-
-.group-notes-section { max-width: 600px; margin: 0 auto 32px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.group-note-item { font-size: 12px; opacity: 0.5; display: flex; gap: 6px; align-items: baseline; }
-.group-note-title { font-weight: 500; }
-.group-note-text { opacity: 0.7; }
-.group-note-item:not(:last-child)::after { content: '·'; opacity: 0.3; }
 
 .inner-view-toggle {
   display: inline-flex; gap: 8px; margin-top: 16px;

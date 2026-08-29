@@ -3,11 +3,19 @@
     <div
       v-for="group in groups"
       :key="group.key"
-      class="inner-item"
-      :class="{ 'has-multiple': group.images.length > 1 }"
-      @click="$emit('open', group.images[0], group)"
+      class="inner-card"
     >
-      <img :src="group.images[0].preview_url" :alt="group.key" loading="lazy" />
+      <div v-if="group.title || group.notes" class="inner-group-label">
+        <div v-if="group.title" class="inner-group-title">{{ group.title }}</div>
+        <div v-if="group.notes" class="inner-group-notes">{{ group.notes }}</div>
+      </div>
+      <div
+        class="inner-item"
+        :class="{ 'has-multiple': group.images.length > 1 }"
+        @click="$emit('open', group.images[0], group)"
+      >
+        <img :src="group.images[0].preview_url" :alt="group.title || group.key" loading="lazy" />
+      </div>
     </div>
   </div>
 </template>
@@ -17,17 +25,25 @@ import { computed } from "vue";
 
 const props = defineProps({
   images: { type: Array, default: () => [] },
+  groupData: { type: Array, default: () => [] },
 });
 
 defineEmits(["open"]);
 
-// Group images by positive_prompt, fallback to prompt_preview
+// Prefer the saved gallery group; imported or legacy images fall back to prompt grouping.
 const groups = computed(() => {
+  const groupMeta = new Map(props.groupData.map((group) => [group.group_id, group]));
   const map = new Map();
   for (const img of props.images) {
-    const key = img.positive_prompt || img.prompt_preview || img.image_id;
+    const key = img.group_id || img.positive_prompt || img.prompt_preview || img.image_id;
     if (!map.has(key)) {
-      map.set(key, { key, images: [] });
+      const meta = groupMeta.get(img.group_id);
+      map.set(key, {
+        key,
+        title: meta?.title || img.group_title || "",
+        notes: meta?.notes || "",
+        images: [],
+      });
     }
     map.get(key).images.push(img);
   }
@@ -42,6 +58,29 @@ const groups = computed(() => {
   gap: 24px;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.inner-card { min-width: 0; }
+
+.inner-group-label {
+  min-height: 42px;
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+
+.inner-group-title {
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.inner-group-notes {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 0.5;
+  overflow-wrap: anywhere;
 }
 
 .inner-item {
