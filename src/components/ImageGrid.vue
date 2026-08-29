@@ -66,6 +66,7 @@ const groups = computed(() => {
   min-height: 42px;
   margin-bottom: 10px;
   padding: 0 4px;
+  text-align: center;
 }
 
 .inner-group-title {
