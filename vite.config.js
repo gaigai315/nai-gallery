@@ -220,7 +220,8 @@ function devApiPlugin() {
 
         if (url === "/admin/uploads/complete" && method === "POST") {
           const body = await readBody(req);
-          res.end(JSON.stringify({ ok: true, image_count: (body.images || []).length, group_count: (body.groups || []).length }));
+          const usedGroups = new Set((body.images || []).map((image) => image.group_id).filter(Boolean));
+          res.end(JSON.stringify({ ok: true, image_count: (body.images || []).length, group_count: usedGroups.size }));
           return;
         }
 

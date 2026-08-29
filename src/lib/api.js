@@ -20,6 +20,7 @@ const ERROR_MESSAGES = {
   admin_required: ["权限不足", "error"],
   not_found: ["资源不存在", "warning"],
   group_not_empty: ["分组内还有图片，不能删除", "warning"],
+  invalid_group: ["目标分组不存在或不属于当前批次", "error"],
   cannot_blacklist_self: ["不能拉黑自己的账号", "error"],
   cannot_whitelist_self: ["不能把自己加入白名单", "error"],
   parse_error: ["数据解析失败", "error"],

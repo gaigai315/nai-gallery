@@ -288,7 +288,8 @@ export async function uploadBatch(batchId, entries, groups, onProgress, format =
     throw Object.assign(new Error(failed.length + " 个文件上传 R2 失败"), { phase: "put", failed });
   }
 
-  const manifestGroups = groups.map((g) => ({
+  const groupsToCreate = groups.filter((g) => !g.existing && g.imageIds?.length);
+  const manifestGroups = groupsToCreate.map((g) => ({
     group_id: g.id === "__ungrouped__" ? "grp-" + crypto.randomUUID() : g.id,
     title: g.title || "Untitled group",
     positive_prompt: g.positive_prompt || null,
@@ -296,7 +297,10 @@ export async function uploadBatch(batchId, entries, groups, onProgress, format =
     params: g.params || {},
     notes: g.notes || null,
   }));
-  const groupIdByOld = new Map(groups.map((g, i) => [g.id, manifestGroups[i].group_id]));
+  const groupIdByOld = new Map(
+    groups.filter((g) => g.existing).map((g) => [g.id, g.id]),
+  );
+  groupsToCreate.forEach((g, index) => groupIdByOld.set(g.id, manifestGroups[index].group_id));
 
   const baseTs = Date.now();
   const manifestImages = entries.map((e, idx) => {

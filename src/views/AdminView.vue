@@ -191,18 +191,20 @@
         <div v-if="entries.length" class="group-preview">
           <div class="preview-toolbar">
             <button class="btn-outline" @click="addGroup">新建分组</button>
-            <span class="hint">{{ groups.length }} 组 · {{ entries.length }} 张图</span>
+            <span class="hint">{{ groupsWithImages.length }} 组 · {{ entries.length }} 张图</span>
           </div>
-          <div v-for="g in groups" :key="g.id" class="group-block">
+          <div v-for="g in groupsWithImages" :key="g.id" class="group-block">
             <div class="group-head">
               <input
                 v-model="g.title"
                 class="group-title-input"
+                :readonly="g.existing"
                 :placeholder="g.id === '__ungrouped__' ? '未分组' : g.positive_prompt.slice(0,40)"
               />
+              <span v-if="g.existing" class="existing-group-badge">已有</span>
               <span class="group-count">{{ g.imageIds.length }}</span>
-              <input v-model="g.notes" class="group-notes-input" placeholder="分组备注..." />
-              <button v-if="g.id !== '__ungrouped__'" class="icon-btn small" title="删除分组（图归入未分组）" @click="deleteGroup(g)">
+              <input v-model="g.notes" class="group-notes-input" :readonly="g.existing" placeholder="分组备注..." />
+              <button v-if="!g.existing && g.id !== '__ungrouped__'" class="icon-btn small" title="删除分组（图归入未分组）" @click="deleteGroup(g)">
                 <svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" /></svg>
               </button>
             </div>
@@ -219,7 +221,9 @@
                   @change="moveImg(id, $event.target.value)"
                   title="移动到分组"
                 >
-                  <option v-for="og in groups" :key="og.id" :value="og.id">{{ og.title || (og.id === '__ungrouped__' ? '未分组' : '分组') }}</option>
+                  <option v-for="og in groups" :key="og.id" :value="og.id">
+                    {{ og.existing ? '已有 · ' : '' }}{{ og.title || (og.id === '__ungrouped__' ? '未分组' : '分组') }}
+                  </option>
                 </select>
                 <button class="thumb-expand" @click="toggleExpand(id)" title="查看提示词">...</button>
               </div>
@@ -1013,6 +1017,7 @@ async function toggleBatch(b) {
 function selectForUpload(b) {
   uploadBatchId.value = b.batch_id;
   uploadBatchName.value = b.batch_name;
+  uploadExistingGroups.value = [];
   view.value = 'upload';
 }
 
@@ -1617,6 +1622,7 @@ function goUploadCreated() {
   uploadBatchId.value = createdBatchId.value;
   const b = batches.value.find((x) => x.batch_id === createdBatchId.value);
   uploadBatchName.value = b?.batch_name || '';
+  uploadExistingGroups.value = [];
   createdPassword.value = '';
   view.value = 'upload';
 }
@@ -1627,6 +1633,7 @@ const uploadBatchId = ref('');
 const uploadBatchName = ref('');
 const entries = ref([]);
 const groups = ref([]);
+const uploadExistingGroups = ref([]);
 const parsing = ref(false);
 const dragging = ref(false);
 const expandedId = ref(null);
@@ -1642,6 +1649,7 @@ const expandedEntry = computed(() => entryById(expandedId.value));
 const expandedMetadata = computed(() => expandedEntry.value?.meta?.stored || expandedEntry.value?.meta?.raw || null);
 const expandedParameterRows = computed(() => getNaiParameterRows(expandedMetadata.value, expandedEntry.value || {}));
 const expandedRawMetadata = computed(() => formatNaiRawMetadata(expandedMetadata.value));
+const groupsWithImages = computed(() => groups.value.filter((group) => group.imageIds.length > 0));
 const totalFiles = computed(() => {
   let c = 0;
   for (const e of entries.value) { c++; if (e.thumbBlob) c++; if (e.txtFile) c++; }
@@ -1665,9 +1673,25 @@ async function handleFiles(fileList) {
   uploadError.value = '';
   uploadResult.value = null;
   try {
-    const plan = await buildUploadPlan(files, filterWords.value);
+    const [plan, existingData] = await Promise.all([
+      buildUploadPlan(files, filterWords.value),
+      apiFetch('/api/admin/groups'),
+    ]);
+    uploadExistingGroups.value = (existingData.groups || []).filter((group) => group.batch_id === uploadBatchId.value);
     entries.value = plan.entries;
-    groups.value = plan.groups;
+    groups.value = [
+      ...uploadExistingGroups.value.map((group) => ({
+        id: group.group_id,
+        groupKey: 'existing-' + group.group_id,
+        existing: true,
+        positive_prompt: '',
+        negative_prompt: '',
+        title: group.title || '未命名',
+        notes: group.notes || '',
+        imageIds: [],
+      })),
+      ...plan.groups,
+    ];
     plan.entries.forEach((e) => makeThumbnail(e).catch(() => null));
   } catch (e) {
     uploadError.value = e.message || '解析失败';
@@ -1695,7 +1719,7 @@ function addGroup() {
     groupKey: 'manual-' + crypto.randomUUID(),
     positive_prompt: '',
     negative_prompt: '',
-    title: '分组 ' + (groups.value.length + 1),
+    title: '分组 ' + (groupsWithImages.value.length + 1),
     notes: '',
     imageIds: [],
   });
@@ -1711,7 +1735,7 @@ function rebuildGroupImageIds() {
 }
 
 function deleteGroup(g) {
-  if (g.id === '__ungrouped__') return;
+  if (g.existing || g.id === '__ungrouped__') return;
   for (const id of g.imageIds) {
     moveEntryToGroup(entries.value, id, '__ungrouped__');
   }
@@ -2292,7 +2316,9 @@ function copyToClipboard(text) {
 .group-title-input { background: transparent; border: none; border-bottom: 1px solid transparent; font-size: 15px; font-weight: 500; padding: 2px 0; color: var(--text); }
 .group-title-input:focus { border-bottom-color: var(--glass-border); outline: none; }
 .group-count { font-size: 12px; opacity: 0.6; padding: 2px 8px; border-radius: 10px; background: rgba(255,255,255,0.05); }
+.existing-group-badge { flex-shrink: 0; padding: 2px 6px; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 10px; opacity: 0.55; }
 .group-notes-input { background: transparent; border: 1px solid var(--glass-border); border-radius: 4px; font-size: 12px; padding: 3px 8px; color: var(--text); width: 140px; }
+.group-title-input[readonly], .group-notes-input[readonly] { cursor: default; opacity: 0.7; }
 .group-notes-input:focus { outline: none; border-color: var(--secondary); }
 .group-prompt { font-size: 12px; opacity: 0.5; margin-bottom: 10px; }
 

@@ -18,6 +18,21 @@ export async function onRequestPost({ request, env }) {
   const batch = await env.DB.prepare("SELECT batch_id FROM batches WHERE batch_id = ?").bind(batchId).first();
   if (!batch) return json({ error: "batch_not_found" }, 404);
 
+  const submittedGroupIds = new Set(groups.map((group) => cleanId(group.group_id)).filter(Boolean));
+  const existingGroupIds = new Set(
+    images
+      .map((image) => cleanId(image.group_id))
+      .filter((groupId) => groupId && !submittedGroupIds.has(groupId)),
+  );
+  for (const groupId of existingGroupIds) {
+    const existing = await env.DB.prepare(
+      "SELECT batch_id FROM prompt_groups WHERE group_id = ?"
+    ).bind(groupId).first();
+    if (!existing || existing.batch_id !== batchId) {
+      return json({ error: "invalid_group" }, 422);
+    }
+  }
+
   const statements = [];
   const now = new Date().toISOString();
   for (const group of groups) {
@@ -86,7 +101,8 @@ export async function onRequestPost({ request, env }) {
 
   statements.push(env.DB.prepare("UPDATE batches SET is_active = 1 WHERE batch_id = ?").bind(batchId));
   await env.DB.batch(statements);
-  return json({ ok: true, image_count: images.length, group_count: groups.length });
+  const usedGroupCount = new Set(images.map((image) => cleanId(image.group_id)).filter(Boolean)).size;
+  return json({ ok: true, image_count: images.length, group_count: usedGroupCount });
   } catch (error) {
     console.error("complete failed", error);
     return json({ error: "internal_error", detail: String(error.message || "") }, 500);
