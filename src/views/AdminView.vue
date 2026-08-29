@@ -292,7 +292,19 @@
                 :class="{ active: imagesGroupFilter === g.group_id }"
                 @click="imagesGroupFilter = g.group_id; imagesPage = 1; fetchImages()"
               >
-                {{ g.title || '未命名' }}
+                <span class="group-tree-label">
+                  {{ g.title || '未命名' }}
+                  <small>{{ Number(g.image_count) || 0 }}</small>
+                </span>
+                <button
+                  v-if="Number(g.image_count) === 0"
+                  class="group-delete-btn"
+                  title="删除空分组"
+                  :disabled="deletingGroupId === g.group_id"
+                  @click.stop="deleteEmptyGroup(g)"
+                >
+                  <svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" /></svg>
+                </button>
               </li>
             </ul>
             <div class="new-group-zone">
@@ -1048,6 +1060,7 @@ const imagesSelected = ref(new Set());
 const imagesLoading = ref(false);
 const imagesError = ref('');
 const imageGroups = ref([]);
+const deletingGroupId = ref('');
 
 async function createGroup() {
   const name = newGroupName.value.trim();
@@ -1070,6 +1083,27 @@ async function fetchImageGroups() {
   } catch {}
 }
 
+async function deleteEmptyGroup(group) {
+  if (!group || Number(group.image_count) > 0 || deletingGroupId.value) return;
+  if (!confirm('确定删除空分组“' + (group.title || '未命名') + '”吗？')) return;
+  deletingGroupId.value = group.group_id;
+  imagesError.value = '';
+  try {
+    await apiFetch('/api/admin/groups/' + encodeURIComponent(group.group_id), { method: 'DELETE' });
+    if (imagesGroupFilter.value === group.group_id) {
+      imagesGroupFilter.value = '';
+      imagesPage.value = 1;
+      await fetchImages();
+    }
+    await fetchImageGroups();
+  } catch (e) {
+    imagesError.value = e.code === 'group_not_empty' ? '分组内还有图片，不能删除' : (e.message || '删除分组失败');
+    await fetchImageGroups();
+  } finally {
+    deletingGroupId.value = '';
+  }
+}
+
 async function fetchImages() {
   if (!imagesBatchId.value) return;
   imagesLoading.value = true;
@@ -1082,6 +1116,7 @@ async function fetchImages() {
     const data = await apiFetch('/api/admin/batches/' + imagesBatchId.value + '/images?' + params);
     imagesData.value = data.images || [];
     imagesTotal.value = data.total || 0;
+    if (!imagesGroupFilter.value) imagesTotalAll.value = data.total || 0;
   } catch (e) {
     imagesError.value = e.message || '加载图片失败';
   } finally {
@@ -1105,7 +1140,7 @@ async function doDeleteImage() {
       if (e.status !== 404) throw e;
     }
     deleteImageTarget.value = null;
-    await fetchImages();
+    await Promise.all([fetchImages(), fetchImageGroups()]);
     imagesSelected.value.clear();
   } catch (e) {
     deleteImageError.value = e.message || '删除失败';
@@ -1131,7 +1166,7 @@ async function doMoveImage() {
       method: 'PATCH', body: JSON.stringify({ group_id: moveImageToGroupId.value }),
     });
     moveImageTarget.value = null;
-    await fetchImages();
+    await Promise.all([fetchImages(), fetchImageGroups()]);
   } catch (e) {
     moveImageError.value = e.message || '移动失败';
   } finally {
@@ -1210,7 +1245,7 @@ async function doBatchMove() {
     }
     batchMoveDialog.value = false;
     imagesSelected.value.clear();
-    await fetchImages();
+    await Promise.all([fetchImages(), fetchImageGroups()]);
   } catch (e) {
     moveImageError.value = e.message || '批量移动失败';
   } finally {
@@ -1258,7 +1293,7 @@ async function doBatchDelete() {
     }
     batchDeleteDialog.value = false;
     imagesSelected.value.clear();
-    await fetchImages();
+    await Promise.all([fetchImages(), fetchImageGroups()]);
   } catch (e) {
     deleteImageError.value = e.message || '批量删除失败';
   } finally {
@@ -2320,9 +2355,15 @@ function copyToClipboard(text) {
 .images-sidebar { width: 180px; flex-shrink: 0; }
 .images-sidebar h4 { font-size: 13px; opacity: 0.6; margin-bottom: 12px; letter-spacing: 1px; }
 .group-tree { list-style: none; display: flex; flex-direction: column; gap: 4px; }
-.group-tree li { padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: background 0.2s; }
+.group-tree li { min-height: 32px; padding: 4px 6px 4px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: background 0.2s; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .group-tree li:hover { background: rgba(255,255,255,0.05); }
 .group-tree li.active { background: rgba(122,139,100,0.15); color: var(--secondary); }
+.group-tree-label { min-width: 0; display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group-tree-label small { font-size: 10px; opacity: 0.45; }
+.group-delete-btn { width: 24px; height: 24px; padding: 4px; flex: 0 0 24px; border: 0; border-radius: 4px; background: transparent; color: currentColor; opacity: 0.35; cursor: pointer; }
+.group-delete-btn:hover { background: rgba(192,57,43,0.12); color: #c0392b; opacity: 1; }
+.group-delete-btn:disabled { cursor: wait; opacity: 0.2; }
+.group-delete-btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.6; fill: none; }
 
 .images-main { flex: 1; min-width: 0; padding-right: 24px; }
 

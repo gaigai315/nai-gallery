@@ -19,6 +19,7 @@ const ERROR_MESSAGES = {
   login_required: ["请先登录", "error"],
   admin_required: ["权限不足", "error"],
   not_found: ["资源不存在", "warning"],
+  group_not_empty: ["分组内还有图片，不能删除", "warning"],
   cannot_blacklist_self: ["不能拉黑自己的账号", "error"],
   cannot_whitelist_self: ["不能把自己加入白名单", "error"],
   parse_error: ["数据解析失败", "error"],

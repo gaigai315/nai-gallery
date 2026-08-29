@@ -225,7 +225,35 @@ function devApiPlugin() {
         }
 
         if (url === "/admin/groups" && method === "GET") {
-          res.end(JSON.stringify({ groups: mockGroups }));
+          const groups = mockGroups.map((group) => ({
+            ...group,
+            image_count: mockImages.filter((image) => image.group_id === group.group_id).length,
+          }));
+          res.end(JSON.stringify({ groups }));
+          return;
+        }
+
+        if (url === "/admin/groups" && method === "POST") {
+          const body = await readBody(req);
+          const group = {
+            group_id: `grp-${Date.now()}`,
+            batch_id: body.batch_id,
+            title: body.title || "未命名",
+            notes: body.notes || "",
+          };
+          mockGroups.push(group);
+          res.end(JSON.stringify({ ok: true, group_id: group.group_id }));
+          return;
+        }
+
+        if (url?.startsWith("/admin/groups/") && method === "DELETE") {
+          const groupId = decodeURIComponent(url.split("/")[3] || "");
+          const imageCount = mockImages.filter((image) => image.group_id === groupId).length;
+          if (imageCount) { res.statusCode = 409; res.end(JSON.stringify({ error: "group_not_empty", image_count: imageCount })); return; }
+          const index = mockGroups.findIndex((group) => group.group_id === groupId);
+          if (index === -1) { res.statusCode = 404; res.end(JSON.stringify({ error: "not_found" })); return; }
+          mockGroups.splice(index, 1);
+          res.end(JSON.stringify({ ok: true }));
           return;
         }
 
