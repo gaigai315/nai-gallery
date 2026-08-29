@@ -215,17 +215,19 @@
                 <span class="thumb-name">{{ entryById(id).baseName }}</span>
                 <span class="thumb-seed" v-if="entryById(id).meta?.seed">#{{ entryById(id).meta.seed }}</span>
                 <span class="thumb-txt" v-if="entryById(id).txtFile">TXT</span>
-                <select
-                  class="thumb-move"
-                  :value="entryById(id).groupId"
-                  @change="moveImg(id, $event.target.value)"
-                  title="移动到分组"
-                >
-                  <option v-for="og in groups" :key="og.id" :value="og.id">
-                    {{ og.existing ? '已有 · ' : '' }}{{ og.title || (og.id === '__ungrouped__' ? '未分组' : '分组') }}
-                  </option>
-                </select>
-                <button class="thumb-expand" @click="toggleExpand(id)" title="查看提示词">...</button>
+                <div class="thumb-actions">
+                  <select
+                    class="thumb-move"
+                    :value="entryById(id).groupId"
+                    @change="moveImg(id, $event.target.value)"
+                    title="移动到分组"
+                  >
+                    <option v-for="og in groups" :key="og.id" :value="og.id">
+                      {{ og.existing ? '已有 · ' : '' }}{{ og.title || (og.id === '__ungrouped__' ? '未分组' : '分组') }}
+                    </option>
+                  </select>
+                  <button class="thumb-expand" @click="toggleExpand(id)" title="查看提示词" aria-label="查看提示词">...</button>
+                </div>
               </div>
             </div>
           </div>
@@ -2328,8 +2330,9 @@ function copyToClipboard(text) {
 .thumb-name { font-size: 10px; opacity: 0.6; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .thumb-seed { font-size: 9px; opacity: 0.5; font-family: monospace; }
 .thumb-txt { position: absolute; top: 4px; right: 4px; font-size: 9px; padding: 1px 5px; border-radius: 8px; background: var(--secondary); color: #fff; }
-.thumb-move { width: 100%; font-size: 10px; padding: 2px; border-radius: 6px; border: 1px solid var(--glass-border); background: transparent; color: var(--text); margin-top: 2px; }
-.thumb-expand { position: absolute; bottom: 4px; right: 4px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.4); color: #fff; border: none; cursor: pointer; font-size: 10px; line-height: 1; }
+.thumb-actions { display: grid; grid-template-columns: minmax(0, 1fr) 24px; align-items: center; gap: 6px; margin-top: 4px; }
+.thumb-move { min-width: 0; width: 100%; height: 24px; font-size: 10px; padding: 2px; border-radius: 6px; border: 1px solid var(--glass-border); background: transparent; color: var(--text); }
+.thumb-expand { width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.4); color: #fff; border: none; cursor: pointer; font-size: 10px; line-height: 1; }
 
 .prompt-detail { margin-top: 20px; padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03); }
 .prompt-detail-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 500; }
