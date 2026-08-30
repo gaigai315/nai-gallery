@@ -7,8 +7,8 @@ import vue from "@vitejs/plugin-vue";
 
 // In-memory dev mock store (lives only for the dev server process).
 const mockBatches = [
-  { batch_id: "dev-batch-001", batch_name: "Dev Batch Alpha", created_at: new Date().toISOString(), expire_at: null, is_active: 1, image_count: 12, group_count: 3, unlock_count: 2, download_count: 5, notes: "\u590f\u5b63\u5408\u96c6\uff0c\u4e3b\u9898\u4e3a\u82b1\u56ed\u4e0e\u98ce\u666f", cover_image_id: null },
-  { batch_id: "dev-batch-002", batch_name: "Dev Batch Beta", created_at: new Date(Date.now() - 86400000).toISOString(), expire_at: null, is_active: 0, image_count: 4, group_count: 1, unlock_count: 0, download_count: 0, notes: "", cover_image_id: null },
+  { batch_id: "dev-batch-001", batch_name: "Dev Batch Alpha", password: "devpass-alpha", created_at: new Date().toISOString(), expire_at: null, is_active: 1, image_count: 12, group_count: 3, unlock_count: 2, download_count: 5, notes: "\u590f\u5b63\u5408\u96c6\uff0c\u4e3b\u9898\u4e3a\u82b1\u56ed\u4e0e\u98ce\u666f", cover_image_id: null },
+  { batch_id: "dev-batch-002", batch_name: "Dev Batch Beta", password: "", created_at: new Date(Date.now() - 86400000).toISOString(), expire_at: null, is_active: 0, image_count: 4, group_count: 1, unlock_count: 0, download_count: 0, notes: "", cover_image_id: null },
 ];
 
 const coverSvg = (label) => "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="260" height="380" viewBox="0 0 260 380"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3a3a2a"/><stop offset="100%" stop-color="#2a2a1a"/></linearGradient></defs><rect width="260" height="380" fill="url(#g)" rx="12"/><rect x="8" y="8" width="244" height="364" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1" rx="8"/><text x="130" y="180" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="sans-serif" font-size="16" letter-spacing="2">' + label + '</text><text x="130" y="210" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-family="sans-serif" font-size="10" letter-spacing="3">THE GLASSHOUSE</text></svg>');
@@ -161,7 +161,7 @@ function devApiPlugin() {
           const name = String(body.batch_name || "Untitled").trim();
           const id = `dev-${Date.now()}`;
           const password = `devpass-${Math.random().toString(36).slice(2, 10)}`;
-          mockBatches.unshift({ batch_id: id, batch_name: name, created_at: new Date().toISOString(), expire_at: body.expire_at || null, is_active: 0, image_count: 0, group_count: 0, unlock_count: 0, download_count: 0 });
+          mockBatches.unshift({ batch_id: id, batch_name: name, password, created_at: new Date().toISOString(), expire_at: body.expire_at || null, is_active: 0, image_count: 0, group_count: 0, unlock_count: 0, download_count: 0 });
           res.end(JSON.stringify({ batch_id: id, batch_name: name, password }));
           return;
         }
@@ -290,11 +290,23 @@ function devApiPlugin() {
 
         if (url?.startsWith("/admin/batches/") && url?.endsWith("/reset-password") && method === "POST") {
           const parts = url.split("/");
-          const batchId = parts[3];
+          const batchId = decodeURIComponent(parts[3]);
+          const body = await readBody(req);
           const chars = "abcdef0123456789";
-          let pwd = "";
-          for (let i = 0; i < 16; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+          let pwd = String(body.password || "").trim();
+          for (let i = pwd.length; i < 16 && !body.password; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+          const batch = mockBatches.find((item) => item.batch_id === batchId);
+          if (!batch) { res.statusCode = 404; res.end(JSON.stringify({ error: "not_found" })); return; }
+          batch.password = pwd;
           res.end(JSON.stringify({ password: pwd }));
+          return;
+        }
+
+        if (url?.startsWith("/admin/batches/") && url?.endsWith("/reset-password") && method === "GET") {
+          const batchId = decodeURIComponent(url.split("/")[3]);
+          const batch = mockBatches.find((item) => item.batch_id === batchId);
+          if (!batch) { res.statusCode = 404; res.end(JSON.stringify({ error: "not_found" })); return; }
+          res.end(JSON.stringify({ password: batch.password || null, recoverable: Boolean(batch.password) }));
           return;
         }
 

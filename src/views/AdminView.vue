@@ -776,6 +776,28 @@
             <textarea v-model="settingsNotes" rows="3" placeholder="批次描述、策展说明..." class="settings-textarea"></textarea>
           </label>
 
+          <div class="field settings-password-field">
+            <span>当前密码</span>
+            <div class="settings-password-row">
+              <code v-if="settingsPassword" class="settings-password-value">{{ settingsPassword }}</code>
+              <span v-else class="settings-password-unavailable">
+                {{ settingsPasswordLoading ? '读取中...' : '旧密码无法读取，请重置一次' }}
+              </span>
+              <button
+                v-if="settingsPassword"
+                class="btn-outline small"
+                type="button"
+                @click="copyToClipboard(settingsPassword)"
+              >复制</button>
+              <button
+                class="btn-outline small"
+                type="button"
+                @click="resetBatchPassword(settingsTarget.batch_id)"
+                :disabled="resetPwdLoading"
+              >{{ resetPwdLoading ? '处理中...' : '重置密码' }}</button>
+            </div>
+          </div>
+
           <label class="field">
             <span>封面图片 <small>(点击选取)</small></span>
           </label>
@@ -795,13 +817,8 @@
 
           <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
             <button class="btn-outline" @click="settingsCoverId = null" v-if="settingsCoverId">清除封面（使用默认）</button>
-            <button class="btn-outline" @click="resetBatchPassword(settingsTarget.batch_id)" :disabled="resetPwdLoading">{{ resetPwdLoading ? '处理中...' : '设置/重置密码' }}</button>
             <button class="btn-outline" @click="closeSettings">取消</button>
             <button class="btn-primary" :disabled="settingsSaving" @click="saveSettings">{{ settingsSaving ? '保存中...' : '保存设置' }}</button>
-          </div>
-          <div v-if="newPassword" class="new-pwd-display" style="margin-top:12px;padding:8px 12px;background:var(--glass-bg);border-radius:8px">
-            新密码：<code style="font-size:16px;font-weight:bold">{{ newPassword }}</code>
-            <button class="btn-outline small" @click="copyToClipboard(newPassword)" style="margin-left:8px">复制</button>
           </div>
           <p v-if="settingsError" class="status-error">{{ settingsError }}</p>
         </div>
@@ -1343,6 +1360,9 @@ const settingsCoverId = ref(null);
 const settingsNotes = ref('');
 const settingsSaving = ref(false);
 const settingsError = ref('');
+const settingsPassword = ref('');
+const settingsPasswordLoading = ref(false);
+const resetPwdLoading = ref(false);
 
 async function openSettings(b) {
   settingsTarget.value = b;
@@ -1350,19 +1370,26 @@ async function openSettings(b) {
   settingsNotes.value = b.notes || '';
   settingsImages.value = [];
   settingsError.value = '';
-  // Load batch images for cover picker
+  settingsPassword.value = '';
+  settingsPasswordLoading.value = true;
+  // Load the cover choices and saved password independently.
   settingsLoading.value = true;
-  try {
-    const data = await apiFetch('/api/admin/batches/' + b.batch_id + '/images?limit=200');
-    settingsImages.value = (data.images || []).map((img) => ({
-      ...img,
-      preview_url: '/api/admin/preview/' + encodeURIComponent(img.image_id) + '?batch_id=' + encodeURIComponent(b.batch_id),
-    }));
-  } catch (e) {
-    settingsError.value = e.message || '加载图片失败';
-  } finally {
-    settingsLoading.value = false;
-  }
+  const encodedBatchId = encodeURIComponent(b.batch_id);
+  await Promise.all([
+    apiFetch('/api/admin/batches/' + encodedBatchId + '/images?limit=200')
+      .then((data) => {
+        settingsImages.value = (data.images || []).map((img) => ({
+          ...img,
+          preview_url: '/api/admin/preview/' + encodeURIComponent(img.image_id) + '?batch_id=' + encodedBatchId,
+        }));
+      })
+      .catch((e) => { settingsError.value = e.message || '加载图片失败'; })
+      .finally(() => { settingsLoading.value = false; }),
+    apiFetch('/api/admin/batches/' + encodedBatchId + '/reset-password')
+      .then((data) => { settingsPassword.value = data.password || ''; })
+      .catch((e) => { settingsError.value = e.message || '读取密码失败'; })
+      .finally(() => { settingsPasswordLoading.value = false; }),
+  ]);
 }
 
 function closeSettings() {
@@ -1370,6 +1397,8 @@ function closeSettings() {
   settingsCoverId.value = null;
   settingsNotes.value = '';
   settingsImages.value = [];
+  settingsPassword.value = '';
+  settingsPasswordLoading.value = false;
 }
 
 async function saveSettings() {
@@ -2135,15 +2164,15 @@ async function resetBatchPassword(batchId) {
   }
   if (!confirm('确定要设置新密码吗？旧密码将立即失效。')) return;
   resetPwdLoading.value = true;
-  newPassword.value = '';
+  settingsError.value = '';
   try {
     const data = await apiFetch('/api/admin/batches/' + encodeURIComponent(batchId) + '/reset-password', {
       method: 'POST',
       body: JSON.stringify({ password: customPassword.trim() }),
     });
-    newPassword.value = data.password;
+    settingsPassword.value = data.password;
   } catch (e) {
-    /* toast handled by apiFetch */
+    settingsError.value = e.message || '重置密码失败';
   } finally {
     resetPwdLoading.value = false;
   }
@@ -2519,9 +2548,18 @@ function copyToClipboard(text) {
 .blacklist-form .blacklist-ids { flex: 1 1 100%; min-width: 100%; resize: vertical; line-height: 1.5; }
 .whitelist-panel { margin-top: 32px; }
 
-/* 新密码显示 */
-.new-pwd-display { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--glass-bg); border-radius: 10px; border: 1px solid var(--glass-border); font-size: 13px; }
-.new-pwd-display code { font-size: 15px; font-weight: bold; letter-spacing: 1px; color: var(--accent, #c6a76c); }
+/* 批次密码 */
+.settings-password-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.settings-password-value,
+.settings-password-unavailable { flex: 1; min-width: 0; padding: 9px 11px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm); background: var(--glass-bg); }
+.settings-password-value { overflow-wrap: anywhere; font-size: 14px; color: var(--accent, #c6a76c); }
+.settings-password-unavailable { color: var(--text); opacity: 0.6; font-size: 12px; }
+
+@media (max-width: 560px) {
+  .settings-password-row { align-items: stretch; flex-wrap: wrap; }
+  .settings-password-value,
+  .settings-password-unavailable { flex-basis: 100%; }
+}
 
 /* 小号按钮变体 */
 .btn-outline.small { padding: 4px 12px; font-size: 12px; border-radius: 12px; }

@@ -1,4 +1,4 @@
-import { hashPassword, randomToken, slugify } from "../../_lib/password.js";
+import { encryptPassword, hashPassword, randomToken, slugify } from "../../_lib/password.js";
 import { readJson } from "../../_lib/request.js";
 import { json, requireAdmin } from "../../_lib/session.js";
 
@@ -35,13 +35,14 @@ export async function onRequestPost({ request, env }) {
     const batchId = `${slugify(body?.batch_id || batchName)}-${randomToken(5)}`;
     const password = randomToken(18);
     const passwordHash = await hashPassword(password);
+    const passwordSecret = await encryptPassword(password, env.SESSION_SECRET);
     const now = new Date().toISOString();
 
     await env.DB.prepare(
-      `INSERT INTO batches (batch_id, batch_name, password_hash, created_at, expire_at, is_active, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO batches (batch_id, batch_name, password_hash, password_secret, created_at, expire_at, is_active, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-      .bind(batchId, batchName, passwordHash, now, body?.expire_at || null, 0, body?.notes || null)
+      .bind(batchId, batchName, passwordHash, passwordSecret, now, body?.expire_at || null, 0, body?.notes || null)
       .run();
 
     return json({ batch_id: batchId, batch_name: batchName, password });

@@ -1,4 +1,7 @@
-import { bytesToHex } from "./crypto.js";
+import { base64UrlDecode, base64UrlEncode, bytesToHex } from "./crypto.js";
+
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
 
 export function randomToken(bytes = 18) {
   const data = new Uint8Array(bytes);
@@ -18,6 +21,43 @@ export async function hashPassword(password) {
     256,
   );
   return `pbkdf2-sha256$${iterations}$${bytesToHex(salt)}$${bytesToHex(new Uint8Array(derived))}`;
+}
+
+async function passwordEncryptionKey(secret) {
+  const keyBytes = await crypto.subtle.digest(
+    "SHA-256",
+    textEncoder.encode(`batch-password:${secret}`),
+  );
+  return crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+export async function encryptPassword(password, secret) {
+  if (!secret) throw new Error("SESSION_SECRET is required to store batch passwords");
+  const iv = new Uint8Array(12);
+  crypto.getRandomValues(iv);
+  const key = await passwordEncryptionKey(secret);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    textEncoder.encode(password),
+  );
+  return `v1.${base64UrlEncode(iv)}.${base64UrlEncode(new Uint8Array(encrypted))}`;
+}
+
+export async function decryptPassword(value, secret) {
+  const [version, ivEncoded, encryptedEncoded] = String(value || "").split(".");
+  if (version !== "v1" || !ivEncoded || !encryptedEncoded || !secret) return null;
+  try {
+    const key = await passwordEncryptionKey(secret);
+    const decrypted = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: base64UrlDecode(ivEncoded) },
+      key,
+      base64UrlDecode(encryptedEncoded),
+    );
+    return textDecoder.decode(decrypted);
+  } catch {
+    return null;
+  }
 }
 
 export function slugify(value) {
