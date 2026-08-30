@@ -7,6 +7,7 @@
     @mouseup="dragEnd"
     @touchend="dragEnd"
   >
+    <div class="tarot-card-title">{{ cards[currentIndex]?.batch_name || '' }}</div>
     <div
       v-for="(card, i) in cards"
       :key="card.batch_id || i"
@@ -28,7 +29,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 
 const props = defineProps({
   cards: { type: Array, default: () => [] },
@@ -92,6 +93,10 @@ function dragEnd(e) {
 
 function onResize() {}
 
+watch(() => props.cards.length, (length) => {
+  currentIndex.value = Math.min(currentIndex.value, Math.max(0, length - 1));
+});
+
 onMounted(() => {
   window.addEventListener("resize", onResize);
 });
@@ -112,6 +117,21 @@ onUnmounted(() => {
   perspective: 1000px;
   overflow: hidden;
   touch-action: pan-y;
+}
+
+.tarot-card-title {
+  position: absolute;
+  top: calc(50% - 226px);
+  left: 50%;
+  width: min(320px, calc(100% - 48px));
+  min-height: 24px;
+  transform: translateX(-50%);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .tarot-card {
@@ -161,6 +181,11 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
+  .tarot-card-title {
+    top: calc(50% - 186px);
+    font-size: 14px;
+  }
+
   .tarot-card {
     width: 200px;
     height: 300px;

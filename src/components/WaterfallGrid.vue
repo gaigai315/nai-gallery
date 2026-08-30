@@ -4,18 +4,23 @@
       <div
         v-for="(card, i) in col"
         :key="card.batch_id || ci + '-' + i"
-        class="waterfall-card"
-        @click="$emit('unlock', card)"
+        class="waterfall-entry"
       >
-        <img :src="card.cover" :alt="card.batch_name" loading="lazy" />
-        <button
-          v-if="isAdmin || (allowLocalDelete && String(card.batch_id || '').startsWith('local:'))"
-          class="card-delete-btn"
-          title="删除此批次"
-          @click.stop="$emit('delete', card)"
+        <div class="waterfall-card-title">{{ card.batch_name }}</div>
+        <div
+          class="waterfall-card"
+          @click="$emit('unlock', card)"
         >
-          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
-        </button>
+          <img :src="card.cover" :alt="card.batch_name" loading="lazy" />
+          <button
+            v-if="isAdmin || (allowLocalDelete && String(card.batch_id || '').startsWith('local:'))"
+            class="card-delete-btn"
+            title="删除此批次"
+            @click.stop="$emit('delete', card)"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -71,6 +76,21 @@ onUnmounted(() => window.removeEventListener("resize", updateColumnCount));
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.waterfall-entry {
+  min-width: 0;
+}
+
+.waterfall-card-title {
+  min-height: 24px;
+  margin: 0 4px 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .waterfall-card {
