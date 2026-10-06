@@ -772,6 +772,11 @@
           <h3>批次设置 — {{ settingsTarget.batch_name }}</h3>
 
           <label class="field">
+            <span>批次名称</span>
+            <input v-model="settingsBatchName" maxlength="120" placeholder="输入批次名称" />
+          </label>
+
+          <label class="field">
             <span>备注</span>
             <textarea v-model="settingsNotes" rows="3" placeholder="批次描述、策展说明..." class="settings-textarea"></textarea>
           </label>
@@ -1357,6 +1362,7 @@ const settingsTarget = ref(null);
 const settingsImages = ref([]);
 const settingsLoading = ref(false);
 const settingsCoverId = ref(null);
+const settingsBatchName = ref('');
 const settingsNotes = ref('');
 const settingsSaving = ref(false);
 const settingsError = ref('');
@@ -1367,6 +1373,7 @@ const resetPwdLoading = ref(false);
 async function openSettings(b) {
   settingsTarget.value = b;
   settingsCoverId.value = b.cover_image_id || null;
+  settingsBatchName.value = b.batch_name || '';
   settingsNotes.value = b.notes || '';
   settingsImages.value = [];
   settingsError.value = '';
@@ -1395,6 +1402,7 @@ async function openSettings(b) {
 function closeSettings() {
   settingsTarget.value = null;
   settingsCoverId.value = null;
+  settingsBatchName.value = '';
   settingsNotes.value = '';
   settingsImages.value = [];
   settingsPassword.value = '';
@@ -1403,16 +1411,22 @@ function closeSettings() {
 
 async function saveSettings() {
   if (!settingsTarget.value) return;
+  const batchName = settingsBatchName.value.trim();
+  if (!batchName) {
+    settingsError.value = '批次名称不能为空';
+    return;
+  }
   settingsSaving.value = true;
   settingsError.value = '';
   try {
-    const body = {};
+    const body = { batch_name: batchName };
     if (settingsCoverId.value !== null) body.cover_image_id = settingsCoverId.value || '';
     if (settingsNotes.value !== null) body.notes = settingsNotes.value;
-    await apiFetch('/api/admin/batches/' + settingsTarget.value.batch_id, { method: 'PATCH', body: JSON.stringify(body) });
+    await apiFetch('/api/admin/batches/' + encodeURIComponent(settingsTarget.value.batch_id), { method: 'PATCH', body: JSON.stringify(body) });
     // Update local state
     const idx = batches.value.findIndex((x) => x.batch_id === settingsTarget.value.batch_id);
     if (idx !== -1) {
+      batches.value[idx].batch_name = batchName;
       if (settingsCoverId.value !== null) batches.value[idx].cover_image_id = settingsCoverId.value;
       if (settingsNotes.value !== null) batches.value[idx].notes = settingsNotes.value;
     }

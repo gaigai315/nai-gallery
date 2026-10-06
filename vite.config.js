@@ -171,6 +171,12 @@ function devApiPlugin() {
           const body = await readBody(req);
           const b = mockBatches.find((x) => x.batch_id === batchId);
           if (!b) { res.statusCode = 404; res.end(JSON.stringify({ error: "not_found" })); return; }
+          if (body.batch_name !== undefined) {
+            const batchName = String(body.batch_name).trim();
+            if (!batchName) { res.statusCode = 400; res.end(JSON.stringify({ error: "batch_name_required" })); return; }
+            if (batchName.length > 120) { res.statusCode = 400; res.end(JSON.stringify({ error: "batch_name_too_long" })); return; }
+            b.batch_name = batchName;
+          }
           if (body.is_active !== undefined) b.is_active = body.is_active ? 1 : 0;
           if (body.expire_at !== undefined) b.expire_at = body.expire_at || null;
           if (body.cover_image_id !== undefined) b.cover_image_id = body.cover_image_id || null;

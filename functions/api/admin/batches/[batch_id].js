@@ -33,6 +33,9 @@ export async function onRequestPatch({ request, env, params }) {
   const auth = await requireAdmin(request, env);
   if (auth.response) return auth.response;
   const body = await readJson(request);
+  const batchName = body?.batch_name === undefined ? undefined : String(body.batch_name).trim();
+  if (batchName !== undefined && !batchName) return json({ error: "batch_name_required" }, 400);
+  if (batchName?.length > 120) return json({ error: "batch_name_too_long" }, 400);
   const isActive = body?.is_active === undefined ? null : Number(Boolean(body.is_active));
   const expireAt = body?.expire_at === undefined ? undefined : body.expire_at || null;
   const coverImageId = body?.cover_image_id === undefined ? undefined : body.cover_image_id || null;
@@ -44,6 +47,7 @@ export async function onRequestPatch({ request, env, params }) {
 
   const sets = [];
   const values = [];
+  if (batchName !== undefined) { sets.push("batch_name = ?"); values.push(batchName); }
   if (isActive !== null) { sets.push("is_active = ?"); values.push(isActive); }
   if (expireAt !== undefined) { sets.push("expire_at = ?"); values.push(expireAt); }
   if (coverImageId !== undefined) { sets.push("cover_image_id = ?"); values.push(coverImageId); }
