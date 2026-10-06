@@ -20,8 +20,8 @@
       <p v-if="batchNotes" class="batch-notes">{{ batchNotes }}</p>
       <p>{{ summary }}</p>
       <div class="inner-view-toggle">
-        <button :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'">网格</button>
         <button :class="{ active: viewMode === 'flip' }" @click="viewMode = 'flip'">翻页</button>
+        <button :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'">网格</button>
       </div>
     </div>
 
@@ -45,10 +45,11 @@
       <div class="skeleton-strip short"></div>
     </div>
 
-    <FlipBook
+    <TarotDeck
       v-if="viewMode === 'flip'"
-      :images="images"
-      @open="openDetail"
+      :key="route.params.batchId"
+      :cards="flipCards"
+      @unlock="openFlipCard"
     />
 
     <DetailView
@@ -71,7 +72,7 @@ import { useRoute, useRouter } from "vue-router";
 import { getLocalRecord, isLocalId } from "../lib/localImport.js";
 import { apiFetch } from "../lib/api.js";
 import ImageGrid from "../components/ImageGrid.vue";
-import FlipBook from "../components/FlipBook.vue";
+import TarotDeck from "../components/TarotDeck.vue";
 import DetailView from "../components/DetailView.vue";
 
 const route = useRoute();
@@ -87,10 +88,46 @@ const error = ref("");
 const sentinelRef = ref(null);
 let observer = null;
 
-const viewMode = ref("grid");
+const viewMode = ref("flip");
 const detailVisible = ref(false);
 const selectedImage = ref(null);
 const selectedGroup = ref(null);
+
+function imageGroupKey(image) {
+  return image.group_id || image.positive_prompt || image.prompt_preview || image.image_id;
+}
+
+const imageGroups = computed(() => {
+  const groupMeta = new Map(groupsData.value.map((group) => [group.group_id, group]));
+  const groups = new Map();
+
+  for (const image of images.value) {
+    const key = imageGroupKey(image);
+    if (!groups.has(key)) {
+      const meta = groupMeta.get(image.group_id);
+      groups.set(key, {
+        key,
+        title: meta?.title || image.group_title || "",
+        notes: meta?.notes || "",
+        images: [],
+      });
+    }
+    groups.get(key).images.push(image);
+  }
+
+  return groups;
+});
+
+const flipCards = computed(() => images.value.map((image, index) => {
+  const group = imageGroups.value.get(imageGroupKey(image)) || null;
+  return {
+    batch_id: image.image_id || `image-${index}`,
+    batch_name: group?.title || "",
+    cover: image.preview_url || image.download_url || "",
+    image,
+    group,
+  };
+}));
 
 const summary = computed(() => {
   const count = total.value || images.value.length;
@@ -107,7 +144,7 @@ async function fetchGallery(opts = {}) {
   }
   error.value = "";
 
-  const limit = opts.limit ?? (route.query.image ? 9999 : 50);
+  const limit = opts.limit ?? (route.query.image || viewMode.value === 'flip' ? 9999 : 50);
   const offset = opts.offset ?? 0;
 
   try {
@@ -171,6 +208,11 @@ function openDetail(image, group) {
   selectedImage.value = image;
   selectedGroup.value = group || null;
   detailVisible.value = true;
+}
+
+function openFlipCard(card) {
+  if (!card?.image) return;
+  openDetail(card.image, card.group);
 }
 
 function navigateInGroup(dir) {
