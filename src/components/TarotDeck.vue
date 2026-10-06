@@ -50,7 +50,8 @@ function cardStyle(i) {
   const isMobile = window.innerWidth <= 768;
   const xOffset = isMobile ? 100 : 140;
   const translateX = diff * xOffset;
-  const translateY = Math.abs(diff) * 30;
+  const deckLift = isMobile ? 0 : -20;
+  const translateY = deckLift + Math.abs(diff) * 30;
   const rotateZ = diff * 15;
   const scale = 1 - Math.abs(diff) * 0.1;
   const zIndex = 10 - Math.abs(diff);
@@ -110,7 +111,7 @@ onUnmounted(() => {
 .tarot-container {
   position: relative;
   width: 100%;
-  height: 60vh;
+  height: clamp(560px, 60vh, 640px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -121,7 +122,7 @@ onUnmounted(() => {
 
 .tarot-card-title {
   position: absolute;
-  top: calc(50% - 226px);
+  top: calc(50% - 272px);
   left: 50%;
   width: min(320px, calc(100% - 48px));
   min-height: 24px;
@@ -136,8 +137,8 @@ onUnmounted(() => {
 
 .tarot-card {
   position: absolute;
-  width: 260px;
-  height: 380px;
+  width: 300px;
+  height: 440px;
   border-radius: 24px;
   overflow: hidden;
   cursor: pointer;
@@ -181,6 +182,10 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
+  .tarot-container {
+    height: 60vh;
+  }
+
   .tarot-card-title {
     top: calc(50% - 186px);
     font-size: 14px;
