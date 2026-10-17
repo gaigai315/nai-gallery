@@ -37,12 +37,18 @@ export async function onRequestPost({ request, env, params }) {
   const passwordSecret = await encryptPassword(newPassword, env.SESSION_SECRET);
   const batchId = decodePathParam(params.batch_id);
 
-  const result = await env.DB.prepare(
-    "UPDATE batches SET password_hash = ?, password_secret = ? WHERE batch_id = ?",
-  )
-    .bind(hash, passwordSecret, batchId)
-    .run();
-  if (!result.meta?.changes) return json({ error: "not_found" }, 404);
+  const [passwordResult, unlockResult] = await env.DB.batch([
+    env.DB.prepare(
+      "UPDATE batches SET password_hash = ?, password_secret = ? WHERE batch_id = ?",
+    ).bind(hash, passwordSecret, batchId),
+    env.DB.prepare(
+      "DELETE FROM user_batch_unlocks WHERE batch_id = ?",
+    ).bind(batchId),
+  ]);
+  if (!passwordResult.meta?.changes) return json({ error: "not_found" }, 404);
 
-  return json({ password: newPassword });
+  return json({
+    password: newPassword,
+    revoked_unlocks: unlockResult.meta?.changes || 0,
+  });
 }

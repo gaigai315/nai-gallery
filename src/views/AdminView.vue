@@ -2177,7 +2177,7 @@ async function resetBatchPassword(batchId) {
     settingsError.value = '密码不能超过 128 个字符';
     return;
   }
-  if (!confirm('确定要设置新密码吗？旧密码将立即失效。')) return;
+  if (!confirm('确定要设置新密码吗？旧密码将立即失效，所有已解锁用户也会失去访问权限。')) return;
   resetPwdLoading.value = true;
   settingsError.value = '';
   try {
