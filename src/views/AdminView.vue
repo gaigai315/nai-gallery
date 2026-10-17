@@ -792,7 +792,7 @@
                 v-if="settingsPassword"
                 class="btn-outline small"
                 type="button"
-                @click="copyToClipboard(settingsPassword)"
+                @click="copyBatchPassword(settingsBatchName, settingsPassword)"
               >复制</button>
               <button
                 class="btn-outline small"
@@ -1660,7 +1660,8 @@ async function createBatch() {
 }
 
 async function copyPassword() {
-  if (createdPassword.value) await navigator.clipboard.writeText(createdPassword.value).catch(() => {});
+  const batch = batches.value.find((item) => item.batch_id === createdBatchId.value);
+  await copyBatchPassword(batch?.batch_name, createdPassword.value);
 }
 
 function goUploadCreated() {
@@ -2191,8 +2192,16 @@ async function resetBatchPassword(batchId) {
     resetPwdLoading.value = false;
   }
 }
-function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => {
+function formatBatchPassword(batchName, password) {
+  const name = String(batchName || '').trim();
+  const secret = String(password || '').trim();
+  return name ? `${name}：${secret}` : secret;
+}
+
+function copyBatchPassword(batchName, password) {
+  const text = formatBatchPassword(batchName, password);
+  if (!text) return Promise.resolve();
+  return navigator.clipboard.writeText(text).then(() => {
     /* brief visual feedback */
   }).catch(() => {});
 }
@@ -2566,7 +2575,7 @@ function copyToClipboard(text) {
 .settings-password-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .settings-password-value,
 .settings-password-unavailable { flex: 1; min-width: 0; padding: 9px 11px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm); background: var(--glass-bg); }
-.settings-password-value { overflow-wrap: anywhere; font-size: 14px; color: var(--accent, #c6a76c); }
+.settings-password-value { overflow-wrap: anywhere; font-size: 14px; color: #000; }
 .settings-password-unavailable { color: var(--text); opacity: 0.6; font-size: 12px; }
 
 @media (max-width: 560px) {
