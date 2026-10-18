@@ -253,6 +253,19 @@ function devApiPlugin() {
           return;
         }
 
+        if (url?.startsWith("/admin/groups/") && method === "PATCH") {
+          const groupId = decodeURIComponent(url.split("/")[3] || "");
+          const body = await readBody(req);
+          const title = String(body.title || "").trim();
+          if (!title) { res.statusCode = 400; res.end(JSON.stringify({ error: "group_title_required" })); return; }
+          if (title.length > 120) { res.statusCode = 400; res.end(JSON.stringify({ error: "group_title_too_long" })); return; }
+          const group = mockGroups.find((item) => item.group_id === groupId);
+          if (!group) { res.statusCode = 404; res.end(JSON.stringify({ error: "not_found" })); return; }
+          group.title = title;
+          res.end(JSON.stringify({ ok: true, group_id: groupId, title }));
+          return;
+        }
+
         if (url?.startsWith("/admin/groups/") && method === "DELETE") {
           const groupId = decodeURIComponent(url.split("/")[3] || "");
           const imageCount = mockImages.filter((image) => image.group_id === groupId).length;

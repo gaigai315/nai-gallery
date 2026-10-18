@@ -1,5 +1,23 @@
 import { json, requireAdmin } from "../../../_lib/session.js";
 
+export async function onRequestPatch({ request, env, params }) {
+  const auth = await requireAdmin(request, env);
+  if (auth.response) return auth.response;
+
+  const body = await request.json().catch(() => ({}));
+  const title = String(body?.title || "").trim();
+  if (!title) return json({ error: "group_title_required" }, 400);
+  if (title.length > 120) return json({ error: "group_title_too_long" }, 400);
+
+  const groupId = String(params.group_id || "");
+  const result = await env.DB.prepare(
+    "UPDATE prompt_groups SET title = ? WHERE group_id = ?",
+  ).bind(title, groupId).run();
+
+  if (!result.meta?.changes) return json({ error: "not_found" }, 404);
+  return json({ ok: true, group_id: groupId, title });
+}
+
 export async function onRequestDelete({ request, env, params }) {
   const auth = await requireAdmin(request, env);
   if (auth.response) return auth.response;

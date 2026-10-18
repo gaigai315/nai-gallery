@@ -302,15 +302,27 @@
                   {{ g.title || '未命名' }}
                   <small>{{ Number(g.image_count) || 0 }}</small>
                 </span>
-                <button
-                  v-if="Number(g.image_count) === 0"
-                  class="group-delete-btn"
-                  title="删除空分组"
-                  :disabled="deletingGroupId === g.group_id"
-                  @click.stop="deleteEmptyGroup(g)"
-                >
-                  <svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" /></svg>
-                </button>
+                <span class="group-tree-actions">
+                  <button
+                    class="group-action-btn"
+                    title="修改分组名称"
+                    aria-label="修改分组名称"
+                    :disabled="renamingGroupId === g.group_id"
+                    @click.stop="renameGroup(g)"
+                  >
+                    <svg viewBox="0 0 24 24"><path d="M4 20h4l11-11-4-4L4 16v4M13.5 6.5l4 4" /></svg>
+                  </button>
+                  <button
+                    v-if="Number(g.image_count) === 0"
+                    class="group-action-btn danger"
+                    title="删除空分组"
+                    aria-label="删除空分组"
+                    :disabled="deletingGroupId === g.group_id"
+                    @click.stop="deleteEmptyGroup(g)"
+                  >
+                    <svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" /></svg>
+                  </button>
+                </span>
               </li>
             </ul>
             <div class="new-group-zone">
@@ -1090,6 +1102,7 @@ const imagesLoading = ref(false);
 const imagesError = ref('');
 const imageGroups = ref([]);
 const deletingGroupId = ref('');
+const renamingGroupId = ref('');
 
 async function createGroup() {
   const name = newGroupName.value.trim();
@@ -1110,6 +1123,38 @@ async function fetchImageGroups() {
     const all = (data.groups || []).filter(g => g.batch_id === imagesBatchId.value);
     imageGroups.value = all;
   } catch {}
+}
+
+async function renameGroup(group) {
+  if (!group || renamingGroupId.value) return;
+  const title = window.prompt('请输入新的分组名称：', group.title || '');
+  if (title === null) return;
+  const trimmedTitle = title.trim();
+  if (!trimmedTitle) {
+    imagesError.value = '分组名称不能为空';
+    return;
+  }
+  if (trimmedTitle.length > 120) {
+    imagesError.value = '分组名称不能超过 120 个字符';
+    return;
+  }
+
+  renamingGroupId.value = group.group_id;
+  imagesError.value = '';
+  try {
+    const data = await apiFetch('/api/admin/groups/' + encodeURIComponent(group.group_id), {
+      method: 'PATCH',
+      body: JSON.stringify({ title: trimmedTitle }),
+    });
+    group.title = data.title || trimmedTitle;
+    for (const image of imagesData.value) {
+      if (image.group_id === group.group_id) image.group_title = group.title;
+    }
+  } catch (e) {
+    imagesError.value = e.message || '修改分组名称失败';
+  } finally {
+    renamingGroupId.value = '';
+  }
 }
 
 async function deleteEmptyGroup(group) {
@@ -2441,10 +2486,12 @@ function copyBatchPassword(batchName, password) {
 .group-tree li.active { background: rgba(122,139,100,0.15); color: var(--secondary); }
 .group-tree-label { min-width: 0; display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .group-tree-label small { font-size: 10px; opacity: 0.45; }
-.group-delete-btn { width: 24px; height: 24px; padding: 4px; flex: 0 0 24px; border: 0; border-radius: 4px; background: transparent; color: currentColor; opacity: 0.35; cursor: pointer; }
-.group-delete-btn:hover { background: rgba(192,57,43,0.12); color: #c0392b; opacity: 1; }
-.group-delete-btn:disabled { cursor: wait; opacity: 0.2; }
-.group-delete-btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.6; fill: none; }
+.group-tree-actions { display: flex; align-items: center; flex: 0 0 auto; }
+.group-action-btn { width: 24px; height: 24px; padding: 4px; flex: 0 0 24px; border: 0; border-radius: 4px; background: transparent; color: currentColor; opacity: 0.35; cursor: pointer; }
+.group-action-btn:hover { background: rgba(122,139,100,0.12); opacity: 1; }
+.group-action-btn.danger:hover { background: rgba(192,57,43,0.12); color: #c0392b; }
+.group-action-btn:disabled { cursor: wait; opacity: 0.2; }
+.group-action-btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.6; fill: none; }
 
 .images-main { flex: 1; min-width: 0; padding-right: 24px; }
 
